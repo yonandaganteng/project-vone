@@ -1,0 +1,6 @@
+{
+  "name": "RentPro - Sistem Rental Event & Anti Double-Booking",
+  "description": "Sistem manajemen rental alat event & audio visual dengan kalender deteksi bentrok stok, invoice snapshot revisi JSON, dan manifest loading gudang.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

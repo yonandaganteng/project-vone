@@ -19,16 +19,16 @@ export function generateInvoicePdf(
   companyProfile?: InvoiceCompanyProfile
 ): void {
   const company = companyProfile || {
-    companyName: 'RENTPRO AUDIO VISUAL',
-    legalName: 'PT RentPro Teknologi Kreatif Nusantara',
+    companyName: 'VENDORONE AUDIO VISUAL',
+    legalName: 'PT VendorOne Teknologi Kreatif Nusantara',
     address: 'Kawasan Industri Audio Visual No. 88, TB Simatupang, Jakarta Selatan',
     phone: '(021) 7890-1234',
     whatsapp: '0812-9900-8800',
-    email: 'invoice@rentpro.id',
+    email: 'invoice@vendorone.id',
     bankName: 'Bank Mandiri (Cabang Senayan Jakarta)',
     bankAccount: '122-00-9876543-2',
-    bankAccountHolder: 'PT RentPro Teknologi Kreatif',
-    logoText: 'RP',
+    bankAccountHolder: 'PT VendorOne Teknologi Kreatif',
+    logoText: 'V1',
     logoBgColor: '#0F172A',
   };
 
@@ -43,16 +43,28 @@ export function generateInvoicePdf(
   const marginX = 15;
   let currentY = 18;
 
-  // 1. BRAND HEADER & KOP SURAT (Dapat diubah oleh Owner)
-  // Brand Logo Box
-  const [logoR, logoG, logoB] = hexToRgb(company.logoBgColor || '#0F172A');
-  doc.setFillColor(logoR, logoG, logoB);
-  doc.roundedRect(marginX, currentY - 4, 11, 11, 2, 2, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  const monogram = (company.logoText || 'RP').substring(0, 3).toUpperCase();
-  doc.text(monogram, marginX + 1.5, currentY + 3.5);
+  // 1. BRAND HEADER & KOP SURAT
+  // Brand Logo Box or Image
+  let logoImageAdded = false;
+  if (company.logoUrl && company.logoUrl.startsWith('data:image')) {
+    try {
+      doc.addImage(company.logoUrl, 'PNG', marginX, currentY - 4, 11, 11);
+      logoImageAdded = true;
+    } catch {
+      logoImageAdded = false;
+    }
+  }
+
+  if (!logoImageAdded) {
+    const [logoR, logoG, logoB] = hexToRgb(company.logoBgColor || '#0F172A');
+    doc.setFillColor(logoR, logoG, logoB);
+    doc.roundedRect(marginX, currentY - 4, 11, 11, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    const monogram = (company.logoText || 'RP').substring(0, 3).toUpperCase();
+    doc.text(monogram, marginX + 1.5, currentY + 3.5);
+  }
 
   // Brand Name
   doc.setTextColor(15, 23, 42);
@@ -311,10 +323,10 @@ export function generateInvoicePdf(
   doc.setTextColor(15, 23, 42);
   doc.text(`( ${snapshot.client.name} )`, marginX + 15, currentY + 18);
 
-  // RentPro signature
+  // VendorOne signature
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Hormat Kami, RentPro Audio Visual:', marginX + sigColWidth + 15, currentY);
+  doc.text(`Hormat Kami, ${company.companyName || 'VendorOne Audio Visual'}:`, marginX + sigColWidth + 15, currentY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
   doc.text(`( ${snapshot.createdBy} )`, marginX + sigColWidth + 15, currentY + 18);

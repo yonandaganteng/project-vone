@@ -9,6 +9,9 @@ export interface UserAccount {
   avatarInitials: string;
   avatarBgColor?: string;
   permissionsDescription: string;
+  passwordHash?: string;
+  status?: 'active' | 'pending' | 'suspended';
+  createdAt?: string;
 }
 
 export interface Equipment {
@@ -23,6 +26,7 @@ export interface Equipment {
   condition: 'Sangat Baik' | 'Baik' | 'Perlu Servis';
   imageUrl?: string;
   serialNumbers: string[];
+  description?: string;
 }
 
 export interface InvoiceCompanyProfile {
@@ -38,6 +42,32 @@ export interface InvoiceCompanyProfile {
   logoText: string;
   logoBgColor: string;
   logoTagline?: string;
+  logoUrl?: string;
+}
+
+export interface InvoiceRecord {
+  id: string; // e.g. "INV-2026-10-0042"
+  invoiceNumber: string;
+  clientName: string;
+  clientCompany?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  eventName: string;
+  eventLocation?: string;
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+  createdAt: string;
+  dueDate?: string;
+  totalAmount: number;
+  paidAmount: number;
+  paymentStatus: PaymentStatus;
+  isArchived: boolean;
+  revisions: InvoiceRevision[];
+  activeRevisionId: string;
+  companyProfile?: InvoiceCompanyProfile;
+  notes?: string;
 }
 
 export interface BookingEquipmentItem {

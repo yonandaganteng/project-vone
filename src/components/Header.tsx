@@ -56,22 +56,18 @@ export const Header: React.FC<HeaderProps> = ({
       subtitle: 'Monitor Jadwal Sewa & Kalkulator Ketersediaan Alat Anti Double-Booking',
     },
     invoice: {
-      title: 'Detail Invoice & Snapshot Riwayat',
-      subtitle: 'Manajemen Penawaran Resmi & Audit Versi JSON Snapshot',
-    },
-    manifest: {
-      title: 'Gudang / Loading Manifest',
-      subtitle: 'Checklist Barcode, Status Keluar & Pengembalian Alat (Touch-Ready)',
+      title: 'Invoice, Arsip Dokumen & Pratinjau',
+      subtitle: 'Manajemen Penawaran Resmi, Invoice Editable, Ubah Logo/Kop Vendor & Arsip Dokumen',
     },
     inventory: {
       title: 'Master Alat & Inventaris',
-      subtitle: 'Daftar Aset Audio Visual, Total Stok Fisik & Biaya Sewa Harian',
+      subtitle: 'Katalog Aset Audio Visual, Edit Tarif & Nama, Deskripsi, serta Hapus Alat',
     },
   };
 
   const currentInfo = tabTitles[currentTab] || {
-    title: 'RentPro System',
-    subtitle: 'Audio Visual Management',
+    title: 'VendorOne System',
+    subtitle: 'Vendor & Rental Management Platform',
   };
 
   const roleProfiles = {
@@ -169,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
               <div className="p-3.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800">
-                  Notifikasi Sistem RentPro
+                  Notifikasi Sistem VendorOne
                 </span>
                 <span className="text-[11px] text-slate-500">
                   {conflictCount > 0 ? `${conflictCount} Perhatian` : 'Semua Normal'}
@@ -197,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
                           Terdeteksi alokasi unit Sony A7 III melebihi stok fisik pada rentang 15-16 Oktober 2026.
                         </p>
                         <span className="inline-block mt-2 font-semibold text-red-700 hover:underline">
-                          Lihat Solusi di Kalender &rarr;
+                          Lihat Detail Kalender Stok &rarr;
                         </span>
                       </div>
                     </div>
@@ -302,7 +298,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {currentUser?.name || profile.name}
                 </div>
                 <div className="text-xs text-slate-400 font-mono">
-                  {currentUser?.email || `${userRole}@rentpro.id`}
+                  {currentUser?.email || `${userRole}@vendorone.id`}
                 </div>
                 <p className="text-[11px] text-slate-300 pt-1 leading-relaxed border-t border-slate-800 mt-2">
                   {currentUser?.permissionsDescription || 'Akses pengguna terverifikasi'}

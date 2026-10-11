@@ -8,14 +8,17 @@ import {
   initialEquipment,
   initialBookings,
   invoiceRevisionsData,
+  initialInvoiceRecords,
   initialWarehouseManifests,
   initialCompanyProfile,
   mockUserAccounts,
+  initialUsersList,
 } from './data/mockData';
 import {
   Equipment,
   EventBooking,
   InvoiceRevision,
+  InvoiceRecord,
   WarehouseManifest,
   InvoiceCompanyProfile,
   UserRole,
@@ -27,7 +30,6 @@ import { Header } from './components/Header';
 import { DashboardView } from './components/DashboardView';
 import { CalendarConflictView } from './components/CalendarConflictView';
 import { InvoiceDetailView } from './components/InvoiceDetailView';
-import { WarehouseManifestView } from './components/WarehouseManifestView';
 import { InventoryView } from './components/InventoryView';
 import { NewBookingModal } from './components/NewBookingModal';
 import { LoginView } from './components/LoginView';
@@ -45,6 +47,8 @@ export default function App() {
   // Domain Database State
   const [equipmentList, setEquipmentList] = useState<Equipment[]>(initialEquipment);
   const [bookings, setBookings] = useState<EventBooking[]>(initialBookings);
+  const [invoiceRecords, setInvoiceRecords] = useState<InvoiceRecord[]>(initialInvoiceRecords);
+  const [activeInvoiceId, setActiveInvoiceId] = useState<string>('INV-2026-10-0042');
   const [invoiceRevisions, setInvoiceRevisions] = useState<InvoiceRevision[]>(
     invoiceRevisionsData['INV-2026-10-0042'] || []
   );
@@ -54,6 +58,9 @@ export default function App() {
   const [companyProfile, setCompanyProfile] = useState<InvoiceCompanyProfile>(
     initialCompanyProfile
   );
+
+  // User Accounts Database State (Role assignments & signups managed by Owner)
+  const [registeredUsers, setRegisteredUsers] = useState<UserAccount[]>(initialUsersList);
 
   // New Booking Modal State
   const [isNewBookingOpen, setIsNewBookingOpen] = useState<boolean>(false);
@@ -129,6 +136,18 @@ export default function App() {
     );
   };
 
+  // Handler: Update complete equipment data (price/dailyRate, name, description, etc.)
+  const handleUpdateEquipment = (updatedEq: Equipment) => {
+    setEquipmentList((prev) =>
+      prev.map((eq) => (eq.id === updatedEq.id ? updatedEq : eq))
+    );
+  };
+
+  // Handler: Delete equipment from master inventory (synced across all roles)
+  const handleDeleteEquipment = (equipmentId: string) => {
+    setEquipmentList((prev) => prev.filter((eq) => eq.id !== equipmentId));
+  };
+
   // Handler: Update equipment condition and location rack (Role: Staf Gudang)
   const handleUpdateEquipmentCondition = (
     equipmentId: string,
@@ -178,6 +197,33 @@ export default function App() {
   // Handler: Add new invoice revision snapshot (v1.3, etc.)
   const handleAddNewRevision = (newRevision: InvoiceRevision) => {
     setInvoiceRevisions((prev) => [newRevision, ...prev]);
+  };
+
+  // Handler: Update complete invoice record & revisions
+  const handleUpdateInvoiceRecord = (updatedInvoice: InvoiceRecord) => {
+    setInvoiceRecords((prev) =>
+      prev.map((inv) => (inv.id === updatedInvoice.id ? updatedInvoice : inv))
+    );
+  };
+
+  // Handler: Add new invoice record
+  const handleAddNewInvoiceRecord = (newInvoice: InvoiceRecord) => {
+    setInvoiceRecords((prev) => [newInvoice, ...prev]);
+    setActiveInvoiceId(newInvoice.id);
+  };
+
+  // Handler: Archive / Unarchive invoice
+  const handleToggleArchiveInvoice = (invoiceId: string) => {
+    setInvoiceRecords((prev) =>
+      prev.map((inv) =>
+        inv.id === invoiceId ? { ...inv, isArchived: !inv.isArchived } : inv
+      )
+    );
+  };
+
+  // Handler: Delete invoice record
+  const handleDeleteInvoiceRecord = (invoiceId: string) => {
+    setInvoiceRecords((prev) => prev.filter((inv) => inv.id !== invoiceId));
   };
 
   // Handler: Update warehouse item status
@@ -258,12 +304,12 @@ export default function App() {
     setIsNewBookingOpen(true);
   };
 
-  // Authentication Handlers
+  // Authentication & User Management Handlers
   const handleLoginSuccess = (user: UserAccount) => {
     setCurrentUser(user);
     setUserRole(user.role);
     if (user.role === 'warehouse') {
-      setCurrentTab('manifest');
+      setCurrentTab('dashboard');
     } else {
       setCurrentTab('dashboard');
     }
@@ -274,19 +320,62 @@ export default function App() {
   };
 
   const handleSwitchRole = (newRole: UserRole) => {
-    const targetAccount = mockUserAccounts[newRole];
+    const targetAccount = registeredUsers.find((u) => u.role === newRole) || mockUserAccounts[newRole];
     if (targetAccount) {
       setCurrentUser(targetAccount);
       setUserRole(newRole);
       if (newRole === 'warehouse') {
-        setCurrentTab('manifest');
+        setCurrentTab('dashboard');
       }
     }
   };
 
-  // If not logged in, render the dedicated Login Screen
+  // Handler: Register a new user (Sign Up)
+  const handleRegisterUser = (newUser: UserAccount) => {
+    setRegisteredUsers((prev) => [newUser, ...prev]);
+  };
+
+  // Handler: Owner changes/grants role to any user
+  const handleUpdateUserRole = (userId: string, newRole: UserRole) => {
+    setRegisteredUsers((prev) =>
+      prev.map((u) => {
+        if (u.id !== userId) return u;
+        const roleDesc =
+          newRole === 'owner'
+            ? 'Akses Penuh: Finansial, Omzet, Ubah Kop/Logo Invoice, Monitoring'
+            : newRole === 'warehouse'
+            ? 'Akses Lapangan: Master Alat, Kontrol Stok Fisik & Kesiapan Logistik'
+            : 'Akses Operasional: Kalender Bentrok, Booking, Monitoring Invoice Belum Lunas';
+        const roleColor =
+          newRole === 'owner' ? '#059669' : newRole === 'warehouse' ? '#D97706' : '#4F46E5';
+
+        const updated = {
+          ...u,
+          role: newRole,
+          permissionsDescription: roleDesc,
+          avatarBgColor: roleColor,
+        };
+
+        // If current logged-in user role was updated, update active state too
+        if (currentUser && currentUser.id === userId) {
+          setCurrentUser(updated);
+          setUserRole(newRole);
+        }
+
+        return updated;
+      })
+    );
+  };
+
+  // If not logged in, render the dedicated Login Screen with Sign Up support
   if (!currentUser) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <LoginView
+        onLoginSuccess={handleLoginSuccess}
+        registeredUsers={registeredUsers}
+        onRegisterUser={handleRegisterUser}
+      />
+    );
   }
 
   return (
@@ -330,12 +419,20 @@ export default function App() {
             <DashboardView
               bookings={bookings}
               equipmentList={equipmentList}
+              invoices={invoiceRecords}
               userRole={userRole}
               conflictMap={conflictMap}
               onSelectEvent={(eventId) => setCurrentTab('calendar')}
               onNavigateToCalendar={() => setCurrentTab('calendar')}
-              onNavigateToInvoice={() => setCurrentTab('invoice')}
-              onNavigateToManifest={() => setCurrentTab('manifest')}
+              onNavigateToInvoice={(invId) => {
+                if (invId) setActiveInvoiceId(invId);
+                setCurrentTab('invoice');
+              }}
+              onNavigateToInventory={() => setCurrentTab('inventory')}
+              userAccounts={registeredUsers}
+              onUpdateUserRole={handleUpdateUserRole}
+              onAddNewUser={handleRegisterUser}
+              onDeleteUser={(uid) => setRegisteredUsers((prev) => prev.filter((u) => u.id !== uid))}
             />
           )}
 
@@ -355,21 +452,20 @@ export default function App() {
 
           {currentTab === 'invoice' && (
             <InvoiceDetailView
+              invoices={invoiceRecords}
+              activeInvoiceId={activeInvoiceId}
+              onChangeActiveInvoiceId={setActiveInvoiceId}
+              onUpdateInvoiceRecord={handleUpdateInvoiceRecord}
+              onAddNewInvoiceRecord={handleAddNewInvoiceRecord}
+              onToggleArchiveInvoice={handleToggleArchiveInvoice}
+              onDeleteInvoiceRecord={handleDeleteInvoiceRecord}
               revisions={invoiceRevisions}
               equipmentList={equipmentList}
+              bookings={bookings}
               companyProfile={companyProfile}
               userRole={userRole}
               onAddNewRevision={handleAddNewRevision}
               onUpdateCompanyProfile={setCompanyProfile}
-            />
-          )}
-
-          {currentTab === 'manifest' && (
-            <WarehouseManifestView
-              manifests={warehouseManifests}
-              userRole={userRole}
-              onUpdateItemStatus={handleUpdateManifestItemStatus}
-              onBulkUpdateStatus={handleBulkUpdateManifestStatus}
             />
           )}
 
@@ -381,6 +477,8 @@ export default function App() {
               onAddNewEquipment={handleAddNewEquipment}
               onUpdateEquipmentStock={handleUpdateEquipmentStock}
               onUpdateEquipmentCondition={handleUpdateEquipmentCondition}
+              onUpdateEquipment={handleUpdateEquipment}
+              onDeleteEquipment={handleDeleteEquipment}
             />
           )}
         </main>
@@ -389,7 +487,7 @@ export default function App() {
         <footer className="border-t border-slate-200 py-4 px-6 text-center text-xs text-slate-500 no-print">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto">
             <span>
-              RentPro AV OS &copy; 2026. Sistem Manajemen Rental & Anti Double-Booking.
+              VendorOne SaaS &copy; 2026. Sistem Manajemen Rental & Anti Double-Booking.
             </span>
             <div className="flex items-center gap-4 text-[11px] text-slate-400">
               <span>Algoritma Deteksi Bentrok: Aktif</span>

@@ -53,16 +53,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'invoice',
-      label: 'Invoice & Snapshot JSON',
+      label: 'Invoice & Arsip Dokumen',
       icon: FileText,
-      badge: 'v1.2 Active',
+      badge: 'Arsip & Edit',
       badgeColor: 'bg-indigo-100 text-indigo-700',
-    },
-    {
-      id: 'manifest',
-      label: 'Gudang & Loading Manifest',
-      icon: Truck,
-      badge: null,
     },
     {
       id: 'inventory',
@@ -94,15 +88,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         {/* Brand Header */}
         <div className="h-16 flex items-center px-6 border-b border-slate-800 shrink-0 gap-3">
-          <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-            RP
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm shadow-md border border-indigo-400/30">
+            V1
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-base tracking-tight text-white flex items-center gap-1.5">
-              RentPro <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono">AV</span>
+              VendorOne <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono uppercase">SaaS</span>
             </span>
             <span className="text-[11px] text-slate-400 font-medium leading-none">
-              Event Gear & Anti-Conflict
+              Rental & Stock Management
             </span>
           </div>
         </div>
@@ -144,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Role Staf Gudang: Loading manifest & barcode"
+              title="Role Staf Gudang: Kelola kondisi alat & stok fisik"
             >
               <Warehouse className="w-3 h-3" />
               <span>Gudang</span>

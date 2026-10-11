@@ -504,7 +504,7 @@ export const CalendarConflictView: React.FC<CalendarConflictViewProps> = ({
         </div>
       </div>
 
-      {/* MODAL: DETAIL EVENT & SOLUSI BENTROK */}
+      {/* MODAL: DETAIL EVENT & STATUS STOK */}
       {selectedEvent && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -558,31 +558,17 @@ export const CalendarConflictView: React.FC<CalendarConflictViewProps> = ({
                     ))}
                   </ul>
 
-                  {/* Solusi Rekomendasi Sistem */}
+                  {/* Pemberitahuan Stok Menipis / Kritis (Terapkan Solusi Ditiadakan) */}
                   <div className="mt-3 pt-3 border-t border-red-200">
-                    <div className="text-xs font-bold text-slate-800 mb-1.5">
-                      Rekomendasi Solusi Otomatis Sistem:
-                    </div>
-                    <div className="bg-white p-3 rounded border border-red-200 space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <strong>Opsi 1: Substitusi Alat</strong>
-                          <p className="text-slate-500 text-[11px]">
-                            Ganti Sony A7 III dengan Sony FX3 Cinema Line (Tersedia 2 unit di gudang).
-                          </p>
-                        </div>
-                        {onResolveConflictSubstitue && (
-                          <button
-                            onClick={() => {
-                              onResolveConflictSubstitue(selectedEvent.id, 'eq-1', 'eq-3');
-                              setSelectedEvent(null);
-                            }}
-                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold shrink-0"
-                          >
-                            Terapkan Solusi
-                          </button>
-                        )}
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs">
+                      <div className="font-bold text-amber-900 flex items-center gap-1.5 mb-1">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Pemberitahuan: Stok Menipis / Kuota Unit Habis!</span>
                       </div>
+                      <p className="text-amber-800 text-[11px] leading-relaxed">
+                        Ketersediaan fisik unit di gudang tidak mencukupi untuk memenuhi permintaan event ini pada tanggal tersebut. 
+                        Silakan hubungi tim logistik/gudang untuk penyesuaian unit atau komunikasi ulang jadwal dengan klien.
+                      </p>
                     </div>
                   </div>
                 </div>

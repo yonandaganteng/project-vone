@@ -8,13 +8,13 @@ import {
   UserCheck,
   Warehouse,
   ArrowRight,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   KeyRound,
 } from 'lucide-react';
 import { UserAccount, UserRole } from '../types/rental';
 import { mockUserAccounts, initialUsersList } from '../data/mockData';
+import { BrandMark } from './BrandMark';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserAccount) => void;
@@ -160,51 +160,67 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setSuccessMessage(`Pendaftaran akun ${newUser.name} berhasil! Silakan masuk dengan role ${newUser.role.toUpperCase()}.`);
     setAuthMode('login');
     setEmail(newUser.email);
-    setPassword(newUser.passwordHash);
+    setPassword(newUser.passwordHash || '');
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
-      {/* Subtle background ambient elements */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[600px] h-[300px] bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div
+      className="min-h-screen flex flex-col justify-center items-center py-12 px-4 relative overflow-x-hidden"
+      style={{ background: 'linear-gradient(160deg, #0c0d0f 0%, #111318 60%, #0e1015 100%)' }}
+    >
+      {/* Ambient architectural field */}
+      <div className="ambient-login" aria-hidden="true">
+        <div className="ambient-login-spotlight" />
+        <div className="ambient-login-spotlight-2" />
+      </div>
 
-      {/* Main Container */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
-        {/* Brand Lockup */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white font-bold text-xl shadow-lg shadow-indigo-600/30 border border-indigo-400/30">
-            V1
+      {/* Main Content — page entrance */}
+      <div className="animate-page-enter relative z-10 w-full" style={{ maxWidth: 420 }}>
+
+        {/* ── Brand lockup ── */}
+        <div className="flex flex-col items-center gap-3 mb-8">
+          <BrandMark />
+          <div className="text-center">
+            <h1
+              className="text-[28px] font-bold tracking-tight text-white leading-none"
+              style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+            >
+              VendorOne
+            </h1>
+            <p className="font-mono text-[11px] mt-1.5" style={{ color: '#6366f1' }}>
+              RENTAL MANAGEMENT · MULTI-ROLE PLATFORM
+            </p>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-2">
-            VendorOne
-            <span className="text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
-              SaaS
-            </span>
-          </h1>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Sistem Manajemen Rental Peralatan Event, Deteksi Bentrok Alokasi Unit & Snapshot Invoice
-          </p>
         </div>
 
-        {/* Card Box */}
-        <div className="mt-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
-          {/* Top Auth Mode Tabs: Masuk vs Daftar Akun Baru */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+        {/* ── Auth card ── */}
+        <div
+          className="w-full"
+          style={{
+            background: '#1a1d24',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 10,
+          }}
+        >
+          {/* Tab switcher — underline style */}
+          <div
+            className="flex items-center px-6 pt-5 pb-0 gap-6"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+          >
             <button
               type="button"
               onClick={() => {
                 setAuthMode('login');
                 setErrorMessage(null);
               }}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                authMode === 'login'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className="pb-3 text-[13px] font-semibold transition-colors relative"
+              style={{
+                color: authMode === 'login' ? '#fff' : 'rgba(255,255,255,0.38)',
+                borderBottom: authMode === 'login' ? '2px solid #4f46e5' : '2px solid transparent',
+                marginBottom: -1,
+              }}
             >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Masuk (Sign In)</span>
+              Sign In
             </button>
             <button
               type="button"
@@ -212,341 +228,404 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 setAuthMode('signup');
                 setErrorMessage(null);
               }}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                authMode === 'signup'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className="pb-3 text-[13px] font-semibold transition-colors relative"
+              style={{
+                color: authMode === 'signup' ? '#fff' : 'rgba(255,255,255,0.38)',
+                borderBottom: authMode === 'signup' ? '2px solid #4f46e5' : '2px solid transparent',
+                marginBottom: -1,
+              }}
             >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Daftar (Sign Up)</span>
+              Sign Up
             </button>
           </div>
 
-          {/* Feedback Messages */}
-          {errorMessage && (
-            <div className="p-3 bg-red-950/60 border border-red-800/80 rounded-lg text-xs text-red-300 flex items-start gap-2 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
+          <div className="p-6 space-y-5">
 
-          {successMessage && (
-            <div className="p-3 bg-emerald-950/60 border border-emerald-800/80 rounded-lg text-xs text-emerald-300 flex items-start gap-2 animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <span>{successMessage}</span>
-            </div>
-          )}
-
-          {/* TAB 1: LOGIN (SIGN IN) */}
-          {authMode === 'login' && (
-            <>
-              <div>
-                <h2 className="text-xs font-bold text-white uppercase tracking-wider">
-                  Pilih Akun Demo per Role (1-Klik Masuk)
-                </h2>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Klik salah satu peran di bawah untuk login langsung sesuai hak akses:
-                </p>
+            {/* Feedback messages */}
+            {errorMessage && (
+              <div
+                className="flex items-start gap-2.5 p-3 rounded-md text-[12px] leading-snug"
+                style={{ background: 'rgba(190,18,60,0.12)', border: '1px solid rgba(190,18,60,0.30)', color: '#fca5a5' }}
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-px" style={{ color: '#e11d48' }} />
+                <span>{errorMessage}</span>
               </div>
+            )}
 
-              {/* 3 Quick Role Login Cards */}
-              <div className="space-y-2.5">
-                {/* Owner Role Card */}
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('owner')}
-                  className="w-full text-left p-3 rounded-xl border border-emerald-900/60 bg-emerald-950/30 hover:bg-emerald-900/40 hover:border-emerald-600 transition-all flex items-start justify-between gap-3 group"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-emerald-600 text-white rounded-lg shrink-0 mt-0.5 shadow-sm">
-                      <ShieldCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-white group-hover:text-emerald-300 transition-colors">
-                          Hendra Gunawan
-                        </span>
-                        <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-mono">
-                          OWNER
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                        owner@vendorone.id
-                      </div>
-                      <p className="text-[10px] text-emerald-400/90 mt-1">
-                        • Akses Penuh: Omset, Finansial & Otorisasi Ubah Role Tim
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-1 transition-transform shrink-0 mt-2" />
-                </button>
-
-                {/* Admin Role Card */}
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('admin')}
-                  className="w-full text-left p-3 rounded-xl border border-indigo-900/60 bg-indigo-950/30 hover:bg-indigo-900/40 hover:border-indigo-600 transition-all flex items-start justify-between gap-3 group"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-indigo-600 text-white rounded-lg shrink-0 mt-0.5 shadow-sm">
-                      <UserCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-white group-hover:text-indigo-300 transition-colors">
-                          Budi Santoso
-                        </span>
-                        <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-300 px-1.5 py-0.2 rounded font-mono">
-                          ADMIN
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                        admin@vendorone.id
-                      </div>
-                      <p className="text-[10px] text-indigo-400/90 mt-1">
-                        • Akses Operasional: Tagihan Belum Lunas & Booking Acara
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-indigo-500 group-hover:translate-x-1 transition-transform shrink-0 mt-2" />
-                </button>
-
-                {/* Warehouse Role Card */}
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('warehouse')}
-                  className="w-full text-left p-3 rounded-xl border border-amber-900/60 bg-amber-950/30 hover:bg-amber-900/40 hover:border-amber-600 transition-all flex items-start justify-between gap-3 group"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-amber-600 text-white rounded-lg shrink-0 mt-0.5 shadow-sm">
-                      <Warehouse className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">
-                          Rahmat Hidayat
-                        </span>
-                        <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded font-mono">
-                          STAF GUDANG
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                        gudang@vendorone.id
-                      </div>
-                      <p className="text-[10px] text-amber-400/90 mt-1">
-                        • Akses Gudang: Master Alat, Kontrol Stok Fisik & Monitoring Stok Menipis
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-amber-500 group-hover:translate-x-1 transition-transform shrink-0 mt-2" />
-                </button>
+            {successMessage && (
+              <div
+                className="flex items-start gap-2.5 p-3 rounded-md text-[12px] leading-snug"
+                style={{ background: 'rgba(5,150,105,0.12)', border: '1px solid rgba(5,150,105,0.28)', color: '#6ee7b7' }}
+              >
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-px" style={{ color: '#059669' }} />
+                <span>{successMessage}</span>
               </div>
+            )}
 
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-800" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-slate-900 px-2 text-slate-500 font-semibold text-[10px]">
-                    Atau Masuk dengan Email Terdaftar
-                  </span>
-                </div>
-              </div>
-
-              {/* Manual Login Form */}
-              <form onSubmit={handleFormSubmit} className="space-y-4">
+            {/* ════ TAB 1: LOGIN ════ */}
+            {authMode === 'login' && (
+              <>
+                {/* Quick role login — compact table rows */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Alamat Email Akun
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="nama@vendorone.id"
-                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                    />
-                  </div>
-                </div>
+                  <p className="section-label mb-2">Demo Access · 1-Click Login</p>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold text-slate-300">
-                      Kata Sandi
-                    </label>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      Default: role123 / password123
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                    />
+                  <div
+                    className="rounded-md overflow-hidden"
+                    style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+                  >
+                    {/* Owner row */}
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                      onClick={() => handleQuickLogin('owner')}
+                      className="w-full text-left group"
+                      style={{ display: 'block' }}
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <div
+                        className="flex items-center gap-3 px-3.5 py-2.5 transition-all"
+                        style={{
+                          borderBottom: '1px solid rgba(255,255,255,0.05)',
+                          borderLeft: '2px solid transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = 'rgba(5,150,105,0.07)';
+                          (e.currentTarget as HTMLDivElement).style.borderLeftColor = '#059669';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+                          (e.currentTarget as HTMLDivElement).style.borderLeftColor = 'transparent';
+                        }}
+                      >
+                        <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: '#10b981' }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-white">Hendra Gunawan</span>
+                            <span className="role-pill role-pill-owner">OWNER</span>
+                          </div>
+                          <div className="font-mono text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.32)' }}>
+                            owner@vendorone.id
+                          </div>
+                          <div className="text-[10px] mt-0.5" style={{ color: 'rgba(16,185,129,0.75)' }}>
+                            Akses Penuh: Finansial, Omzet & Otorisasi Role Tim
+                          </div>
+                        </div>
+                        <ArrowRight
+                          className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
+                          style={{ color: 'rgba(255,255,255,0.20)' }}
+                        />
+                      </div>
+                    </button>
+
+                    {/* Admin row */}
+                    <button
+                      type="button"
+                      onClick={() => handleQuickLogin('admin')}
+                      className="w-full text-left group"
+                      style={{ display: 'block' }}
+                    >
+                      <div
+                        className="flex items-center gap-3 px-3.5 py-2.5 transition-all"
+                        style={{
+                          borderBottom: '1px solid rgba(255,255,255,0.05)',
+                          borderLeft: '2px solid transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = 'rgba(79,70,229,0.09)';
+                          (e.currentTarget as HTMLDivElement).style.borderLeftColor = '#4f46e5';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+                          (e.currentTarget as HTMLDivElement).style.borderLeftColor = 'transparent';
+                        }}
+                      >
+                        <UserCheck className="w-4 h-4 shrink-0" style={{ color: '#6366f1' }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-white">Budi Santoso</span>
+                            <span className="role-pill role-pill-admin">ADMIN</span>
+                          </div>
+                          <div className="font-mono text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.32)' }}>
+                            admin@vendorone.id
+                          </div>
+                          <div className="text-[10px] mt-0.5" style={{ color: 'rgba(99,102,241,0.80)' }}>
+                            Akses Operasional: Booking & Invoice Belum Lunas
+                          </div>
+                        </div>
+                        <ArrowRight
+                          className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
+                          style={{ color: 'rgba(255,255,255,0.20)' }}
+                        />
+                      </div>
+                    </button>
+
+                    {/* Warehouse row */}
+                    <button
+                      type="button"
+                      onClick={() => handleQuickLogin('warehouse')}
+                      className="w-full text-left group"
+                      style={{ display: 'block' }}
+                    >
+                      <div
+                        className="flex items-center gap-3 px-3.5 py-2.5 transition-all"
+                        style={{
+                          borderLeft: '2px solid transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = 'rgba(217,119,6,0.08)';
+                          (e.currentTarget as HTMLDivElement).style.borderLeftColor = '#d97706';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+                          (e.currentTarget as HTMLDivElement).style.borderLeftColor = 'transparent';
+                        }}
+                      >
+                        <Warehouse className="w-4 h-4 shrink-0" style={{ color: '#f59e0b' }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-white">Rahmat Hidayat</span>
+                            <span className="role-pill role-pill-warehouse">GUDANG</span>
+                          </div>
+                          <div className="font-mono text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.32)' }}>
+                            gudang@vendorone.id
+                          </div>
+                          <div className="text-[10px] mt-0.5" style={{ color: 'rgba(245,158,11,0.80)' }}>
+                            Akses Lapangan: Master Alat & Kontrol Stok Fisik
+                          </div>
+                        </div>
+                        <ArrowRight
+                          className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
+                          style={{ color: 'rgba(255,255,255,0.20)' }}
+                        />
+                      </div>
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs">
-                  <label className="flex items-center gap-2 cursor-pointer text-slate-400">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-0"
-                    />
-                    <span>Ingat sesi masuk</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPassword('admin123');
-                      setEmail('admin@vendorone.id');
-                    }}
-                    className="text-indigo-400 hover:underline text-[11px]"
-                  >
-                    Reset ke Admin
+                {/* Divider */}
+                <div className="relative flex items-center gap-3">
+                  <div className="flex-1" style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+                  <span className="font-mono text-[10px] uppercase" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                    atau email terdaftar
+                  </span>
+                  <div className="flex-1" style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+                </div>
+
+                {/* Manual Login Form */}
+                <form onSubmit={handleFormSubmit} className="space-y-4">
+                  <div>
+                    <label className="field-label mb-1.5">Alamat Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.28)' }} />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="nama@vendorone.id"
+                        className="field-input font-mono text-[12px] pl-9"
+                        style={{
+                          background: '#0c0d0f',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: '#fff',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="field-label">Kata Sandi</label>
+                      <span className="font-mono text-[10px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                        default: role123
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.28)' }} />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="field-input font-mono text-[12px] pl-9 pr-9"
+                        style={{
+                          background: '#0c0d0f',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: '#fff',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                        style={{ color: 'rgba(255,255,255,0.28)' }}
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.65)')}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.28)')}
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer text-[11px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="rounded"
+                        style={{ accentColor: '#4f46e5' }}
+                      />
+                      <span>Ingat sesi masuk</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPassword('admin123');
+                        setEmail('admin@vendorone.id');
+                      }}
+                      className="text-[11px] transition-colors"
+                      style={{ color: '#6366f1' }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#818cf8')}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#6366f1')}
+                    >
+                      Reset ke Admin
+                    </button>
+                  </div>
+
+                  <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-2.5">
+                    <KeyRound className="w-4 h-4" />
+                    <span>Masuk ke Sistem VendorOne</span>
                   </button>
-                </div>
+                </form>
+              </>
+            )}
 
-                <button
-                  type="submit"
-                  className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow-md shadow-indigo-600/30 transition-colors flex items-center justify-center gap-2"
-                >
-                  <KeyRound className="w-4 h-4" />
-                  <span>Masuk ke Sistem VendorOne</span>
-                </button>
-              </form>
-            </>
-          )}
-
-          {/* TAB 2: SIGN UP / DAFTAR AKUN BARU */}
-          {authMode === 'signup' && (
-            <form onSubmit={handleSignupSubmit} className="space-y-4">
-              <div>
-                <h2 className="text-xs font-bold text-white uppercase tracking-wider">
-                  Formulir Pendaftaran Akun VendorOne
-                </h2>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Daftarkan diri Anda. Role awal dapat dipilih dan nantinya dapat disesuaikan atau diubah oleh Owner melalui Dashboard Owner.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Nama Lengkap
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={signupName}
-                  onChange={(e) => setSignupName(e.target.value)}
-                  placeholder="Contoh: Muhammad Farhan"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Alamat Email (Untuk Login)
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={signupEmail}
-                  onChange={(e) => setSignupEmail(e.target.value)}
-                  placeholder="farhan@vendorone.id"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* ════ TAB 2: SIGN UP ════ */}
+            {authMode === 'signup' && (
+              <form onSubmit={handleSignupSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Pilih Role Akses
-                  </label>
-                  <select
-                    value={signupRequestedRole}
-                    onChange={(e) => setSignupRequestedRole(e.target.value as UserRole)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
-                  >
-                    <option value="admin">Admin (Invoice Belum Lunas & Booking)</option>
-                    <option value="warehouse">Staf Gudang (Stok Fisik & Logistik)</option>
-                    <option value="owner">Owner (Finansial & Otorisasi Role)</option>
-                  </select>
+                  <p className="section-label mb-0.5">Formulir Pendaftaran</p>
+                  <p className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    Role awal dapat diubah oleh Owner melalui Dashboard Owner setelah pendaftaran.
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Jabatan / Posisi
-                  </label>
+                  <label className="field-label mb-1.5">Nama Lengkap</label>
                   <input
                     type="text"
-                    value={signupTitle}
-                    onChange={(e) => setSignupTitle(e.target.value)}
-                    placeholder="cth: Staf Operasional"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    required
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="Contoh: Muhammad Farhan"
+                    className="field-input text-[12px]"
+                    style={{
+                      background: '#0c0d0f',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      color: '#fff',
+                    }}
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Kata Sandi
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={signupPassword}
-                  onChange={(e) => setSignupPassword(e.target.value)}
-                  placeholder="Minimal 6 karakter"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                />
-              </div>
+                <div>
+                  <label className="field-label mb-1.5">Alamat Email (Login)</label>
+                  <input
+                    type="email"
+                    required
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="farhan@vendorone.id"
+                    className="field-input font-mono text-[12px]"
+                    style={{
+                      background: '#0c0d0f',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      color: '#fff',
+                    }}
+                  />
+                </div>
 
-              <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-lg text-[11px] text-slate-400 space-y-1">
-                <div className="font-semibold text-slate-300">Catatan Otorisasi:</div>
-                <p>
-                  Setelah akun terdaftar, Owner dapat sewaktu-waktu memperbarui atau mengubah role Anda secara langsung dari modul <em>"Manajemen Pengguna (Owner Control)"</em> di Dashboard Owner.
-                </p>
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="field-label mb-1.5">Role Akses</label>
+                    <select
+                      value={signupRequestedRole}
+                      onChange={(e) => setSignupRequestedRole(e.target.value as UserRole)}
+                      className="field-input text-[12px] font-semibold"
+                      style={{
+                        background: '#0c0d0f',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        color: '#fff',
+                      }}
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="warehouse">Staf Gudang</option>
+                      <option value="owner">Owner</option>
+                    </select>
+                  </div>
 
-              <button
-                type="submit"
-                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-md shadow-emerald-600/30 transition-colors flex items-center justify-center gap-2"
-              >
-                <UserCheck className="w-4 h-4" />
-                <span>Daftar Akun Sekarang</span>
-              </button>
-            </form>
-          )}
+                  <div>
+                    <label className="field-label mb-1.5">Jabatan</label>
+                    <input
+                      type="text"
+                      value={signupTitle}
+                      onChange={(e) => setSignupTitle(e.target.value)}
+                      placeholder="cth: Staf Operasional"
+                      className="field-input text-[12px]"
+                      style={{
+                        background: '#0c0d0f',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="field-label mb-1.5">Kata Sandi</label>
+                  <input
+                    type="password"
+                    required
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="Minimal 6 karakter"
+                    className="field-input font-mono text-[12px]"
+                    style={{
+                      background: '#0c0d0f',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      color: '#fff',
+                    }}
+                  />
+                </div>
+
+                {/* Authorization note */}
+                <div
+                  className="p-3 rounded-md text-[11px] leading-relaxed"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.38)',
+                  }}
+                >
+                  <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.55)' }}>Catatan Otorisasi: </span>
+                  Setelah akun terdaftar, Owner dapat mengubah role Anda melalui modul{' '}
+                  <em style={{ color: 'rgba(255,255,255,0.48)' }}>"Manajemen Pengguna (Owner Control)"</em>.
+                </div>
+
+                <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-2.5">
+                  <UserCheck className="w-4 h-4" />
+                  <span>Daftar Akun Sekarang</span>
+                </button>
+              </form>
+            )}
+
+          </div>
         </div>
 
-        {/* Security & System Disclaimer */}
-        <div className="text-center mt-6 text-[11px] text-slate-500 space-y-1">
-          <p>
-            VendorOne SaaS &copy; 2026. Platform Manajemen Rental Peralatan & Logistik Event.
-          </p>
-          <p className="text-[10px] text-slate-600">
-            Multi-Role Authentication: Hak akses tersinkronisasi otomatis dengan wewenang masing-masing peran.
-          </p>
-        </div>
+        {/* Footer */}
+        <p className="text-center font-mono text-[10px] mt-6" style={{ color: 'rgba(255,255,255,0.18)' }}>
+          VendorOne © 2026 · Rental Management & Event Logistics Platform
+        </p>
+
       </div>
     </div>
   );

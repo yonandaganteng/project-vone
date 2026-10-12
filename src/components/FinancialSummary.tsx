@@ -9,7 +9,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   PieChart,
   Pie,
   Cell,
@@ -22,10 +21,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowUpRight,
-  Sparkles,
   PieChart as PieChartIcon,
   BarChart3,
   Calendar,
+  ArrowRight,
 } from 'lucide-react';
 import { EventBooking, Equipment, UserRole } from '../types/rental';
 import { formatRupiah } from '../utils/formatters';
@@ -37,6 +36,63 @@ interface FinancialSummaryProps {
   onNavigateToCalendar?: () => void;
   onNavigateToInvoice?: () => void;
 }
+
+// Custom dark-ink tooltip for Recharts charts
+const DarkTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div
+      style={{
+        background: '#1a1d24',
+        border: '1px solid rgba(255,255,255,0.06)',
+        borderRadius: '6px',
+        padding: '10px 14px',
+        fontSize: '11px',
+        color: '#fff',
+        minWidth: '160px',
+      }}
+    >
+      <div style={{ marginBottom: '6px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>
+        {label}
+      </div>
+      {payload.map((entry: any, i: number) => {
+        const nameMap: Record<string, string> = {
+          terbayar: 'Kas Terbayar',
+          piutang: 'Sisa Piutang',
+          totalOmset: 'Total Omset',
+        };
+        return (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', marginBottom: '2px' }}>
+            <span style={{ color: entry.color || 'rgba(255,255,255,0.6)' }}>{nameMap[entry.dataKey] || entry.name}</span>
+            <span style={{ fontFamily: 'monospace', color: '#fff' }}>{formatRupiah(Number(entry.value))}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const UtilTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const d = payload[0]?.payload;
+  return (
+    <div
+      style={{
+        background: '#1a1d24',
+        border: '1px solid rgba(255,255,255,0.06)',
+        borderRadius: '6px',
+        padding: '10px 14px',
+        fontSize: '11px',
+        color: '#fff',
+      }}
+    >
+      <div style={{ marginBottom: '4px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{d?.category}</div>
+      <div style={{ fontFamily: 'monospace' }}>
+        {d?.utilizationRate}% &mdash; {d?.bookedUnits} / {d?.totalStock} unit
+      </div>
+    </div>
+  );
+};
 
 export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
   bookings,
@@ -205,176 +261,173 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
 
   const isOwner = userRole === 'owner';
 
+  const tabs: { key: 'all' | 'revenue' | 'utilization'; label: string }[] = [
+    { key: 'all', label: 'Semua' },
+    { key: 'revenue', label: 'Pendapatan' },
+    { key: 'utilization', label: 'Utilisasi' },
+  ];
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      {/* Component Header */}
-      <div className="p-5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="animate-page-enter space-y-6">
+
+      {/* ── Section Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              {isOwner ? <TrendingUp className="w-5 h-5" /> : <Boxes className="w-5 h-5" />}
-            </span>
-            <h2 className="text-base font-bold text-slate-900 tracking-tight">
-              {isOwner
-                ? 'Ringkasan Finansial & Rasio Utilisasi Alat (Owner Executive Analytics)'
-                : 'Ringkasan Kapasitas & Utilisasi Stok Gudang (Warehouse Stock Analytics)'}
-            </h2>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="section-label mb-1">
+            {isOwner ? 'Finansial & Utilisasi' : 'Kapasitas & Stok Gudang'}
+          </p>
+          <h2 className="text-[18px] font-semibold text-[#111318] leading-snug">
             {isOwner
-              ? 'Visualisasi analitik pendapatan sewa per bulan dan tingkat utilisasi kapasitas inventaris gudang berbasis data riil.'
-              : 'Visualisasi alokasi unit fisik armada dan kapasitas ketersediaan stok gudang tanpa data finansial.'}
+              ? 'Ringkasan Keuangan & Armada'
+              : 'Alokasi Stok Gudang'}
+          </h2>
+          <p className="text-[13px] text-[#6b7280] mt-0.5">
+            {isOwner
+              ? 'Analitik pendapatan sewa & tingkat utilisasi kapasitas inventaris berbasis data riil'
+              : 'Alokasi unit fisik armada dan kapasitas ketersediaan stok gudang'}
           </p>
         </div>
 
-        {/* View Segment Switcher (Only for Owner) */}
-        {isOwner && (
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 self-start md:self-auto">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'all'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Semua Analitik
+        <div className="flex items-center gap-2 shrink-0">
+          {onNavigateToCalendar && (
+            <button onClick={onNavigateToCalendar} className="btn-ghost text-[13px] flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
+              Kalender
+              <ArrowRight className="w-3 h-3" />
             </button>
-            <button
-              onClick={() => setActiveTab('revenue')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1 ${
-                activeTab === 'revenue'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              Pendapatan Sewa
+          )}
+          {isOwner && onNavigateToInvoice && (
+            <button onClick={onNavigateToInvoice} className="btn-ghost text-[13px] flex items-center gap-1.5">
+              <Receipt className="w-3.5 h-3.5" />
+              Invoice
+              <ArrowRight className="w-3 h-3" />
             </button>
-            <button
-              onClick={() => setActiveTab('utilization')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1 ${
-                activeTab === 'utilization'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Boxes className="w-3.5 h-3.5" />
-              Utilisasi Stok
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Mini KPI Highlights */}
-      <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100 bg-slate-50/60 border-b border-slate-200">
+      {/* ── Tab Switcher (Owner only) ── */}
+      {isOwner && (
+        <div className="flex items-center gap-6 border-b border-[rgba(17,19,24,0.08)]">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`pb-2.5 text-[13px] font-medium transition-colors relative ${
+                activeTab === t.key
+                  ? 'text-[#111318]'
+                  : 'text-[#9ca3af] hover:text-[#374151]'
+              }`}
+            >
+              {t.label}
+              {activeTab === t.key && (
+                <span
+                  className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full"
+                  style={{ background: '#4f46e5' }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── KPI Row ── */}
+      <div className="flex divide-x divide-[rgba(17,19,24,0.08)]">
         {isOwner ? (
           <>
-            <div className="p-4">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
-                Omset Booking Bulan Ini
-              </span>
-              <div className="text-base sm:text-lg font-bold font-mono text-slate-900 mt-0.5">
+            <div className="flex-1 pr-6 animate-value-appear stagger-1">
+              <p className="section-label mb-1">Omset Booking</p>
+              <div className="metric-figure-mono text-[#111318]">
                 {formatRupiah(totalOctoberRevenue)}
               </div>
-              <div className="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
-                <ArrowUpRight className="w-3 h-3" />
-                <span>{bookings.length} Event Terdaftar</span>
+              <div className="flex items-center gap-1 mt-1">
+                <ArrowUpRight className="w-3 h-3 text-[#059669]" />
+                <span className="text-[12px] text-[#059669] font-medium">{bookings.length} event terdaftar</span>
               </div>
             </div>
 
-            <div className="p-4">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
-                Kas Masuk (Terbayar)
-              </span>
-              <div className="text-base sm:text-lg font-bold font-mono text-emerald-600 mt-0.5">
+            <div className="flex-1 px-6 animate-value-appear stagger-2">
+              <p className="section-label mb-1">Kas Masuk</p>
+              <div className="metric-figure-mono text-[#059669]">
                 {formatRupiah(totalOctoberPaid)}
               </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                Kolektibilitas: <strong className="text-slate-800">{collectionRate}%</strong>
+              <div className="mt-1 text-[12px] text-[#6b7280]">
+                Kolektibilitas&ensp;<span className="font-mono text-[#111318] font-semibold">{collectionRate}%</span>
               </div>
             </div>
 
-            <div className="p-4">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
-                Sisa Piutang Klien
-              </span>
-              <div className="text-base sm:text-lg font-bold font-mono text-amber-600 mt-0.5">
+            <div className="flex-1 px-6 animate-value-appear stagger-3">
+              <p className="section-label mb-1">Sisa Piutang</p>
+              <div className="metric-figure-mono text-[#d97706]">
                 {formatRupiah(totalOctoberUnpaid)}
               </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                {bookings.filter((b) => b.paymentStatus !== 'Lunas').length} Invoice Belum Lunas
+              <div className="mt-1 text-[12px] text-[#6b7280]">
+                {bookings.filter((b) => b.paymentStatus !== 'Lunas').length} invoice belum lunas
               </div>
             </div>
 
-            <div className="p-4">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
-                Rata-rata Utilisasi Armada
-              </span>
-              <div className="text-base sm:text-lg font-bold font-mono text-indigo-600 mt-0.5">
-                {overallFleetUtilization}% Kapasitas
+            <div className="flex-1 pl-6 animate-value-appear stagger-4">
+              <p className="section-label mb-1">Utilisasi Armada</p>
+              <div className="metric-figure-mono text-[#4f46e5]">
+                {overallFleetUtilization}%
               </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
+              <div className="mt-1 text-[12px]">
                 {overallFleetUtilization > 80 ? (
-                  <span className="text-amber-600 font-medium">⚠️ Permintaan Tinggi</span>
+                  <span className="text-[#d97706] font-medium flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" /> Permintaan Tinggi
+                  </span>
                 ) : (
-                  <span className="text-emerald-600 font-medium">✓ Level Kapasitas Sehat</span>
+                  <span className="text-[#059669] font-medium flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Kapasitas Sehat
+                  </span>
                 )}
               </div>
             </div>
           </>
         ) : (
           <>
-            <div className="p-4">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
-                Total Unit Fisik Gudang
-              </span>
-              <div className="text-base sm:text-lg font-bold font-mono text-slate-900 mt-0.5">
-                {equipmentList.reduce((sum, e) => sum + e.totalStock, 0)} Unit
+            <div className="flex-1 pr-6 animate-value-appear stagger-1">
+              <p className="section-label mb-1">Total Unit Fisik</p>
+              <div className="metric-figure-mono text-[#111318]">
+                {equipmentList.reduce((sum, e) => sum + e.totalStock, 0)}
+                <span className="text-[14px] font-normal ml-1">unit</span>
               </div>
-              <div className="text-[11px] text-indigo-600 font-medium flex items-center gap-1 mt-0.5">
-                <span>Total 6 Kategori Alat</span>
-              </div>
+              <div className="mt-1 text-[12px] text-[#4f46e5] font-medium">6 Kategori Alat</div>
             </div>
 
-            <div className="p-4">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
-                Unit Sedang di Luar (Disewa)
-              </span>
-              <div className="text-base sm:text-lg font-bold font-mono text-amber-600 mt-0.5">
-                {categoryStats.reduce((sum, c) => sum + c.bookedUnits, 0)} Unit
+            <div className="flex-1 px-6 animate-value-appear stagger-2">
+              <p className="section-label mb-1">Unit di Luar</p>
+              <div className="metric-figure-mono text-[#d97706]">
+                {categoryStats.reduce((sum, c) => sum + c.bookedUnits, 0)}
+                <span className="text-[14px] font-normal ml-1">unit</span>
               </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                Teralokasi di event aktif
-              </div>
+              <div className="mt-1 text-[12px] text-[#6b7280]">Teralokasi event aktif</div>
             </div>
 
-            <div className="p-4">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
-                Unit Standby di Rak Gudang
-              </span>
-              <div className="text-base sm:text-lg font-bold font-mono text-emerald-600 mt-0.5">
+            <div className="flex-1 px-6 animate-value-appear stagger-3">
+              <p className="section-label mb-1">Unit Standby</p>
+              <div className="metric-figure-mono text-[#059669]">
                 {equipmentList.reduce((sum, e) => sum + e.totalStock, 0) -
-                  categoryStats.reduce((sum, c) => sum + c.bookedUnits, 0)}{' '}
-                Unit
+                  categoryStats.reduce((sum, c) => sum + c.bookedUnits, 0)}
+                <span className="text-[14px] font-normal ml-1">unit</span>
               </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                Siap untuk disewa / standby
-              </div>
+              <div className="mt-1 text-[12px] text-[#6b7280]">Siap disewa / standby</div>
             </div>
 
-            <div className="p-4">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
-                Tingkat Utilisasi Keseluruhan
-              </span>
-              <div className="text-base sm:text-lg font-bold font-mono text-indigo-600 mt-0.5">
-                {overallFleetUtilization}% Kapasitas
+            <div className="flex-1 pl-6 animate-value-appear stagger-4">
+              <p className="section-label mb-1">Utilisasi Keseluruhan</p>
+              <div className="metric-figure-mono text-[#4f46e5]">
+                {overallFleetUtilization}%
               </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
+              <div className="mt-1 text-[12px]">
                 {overallFleetUtilization > 80 ? (
-                  <span className="text-amber-600 font-medium">⚠️ Stok Banyak Terpakai</span>
+                  <span className="text-[#d97706] font-medium flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" /> Stok Banyak Terpakai
+                  </span>
                 ) : (
-                  <span className="text-emerald-600 font-medium">✓ Kapasitas Aman</span>
+                  <span className="text-[#059669] font-medium flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Kapasitas Aman
+                  </span>
                 )}
               </div>
             </div>
@@ -382,359 +435,496 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
         )}
       </div>
 
-      {/* Main Charts Body */}
-      <div className="p-5 space-y-6">
-        {/* CHART 1: Monthly Rental Revenue Trend (Only for Owner) */}
-        {isOwner && (activeTab === 'all' || activeTab === 'revenue') && (
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-1">
+      {/* ── CHART 1: Monthly Revenue Trend (Owner only) ── */}
+      {isOwner && (activeTab === 'all' || activeTab === 'revenue') && (
+        <div className="panel p-5">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+            <div>
+              <p className="section-label mb-0.5">Tren Pendapatan Bulanan</p>
+              <h3 className="text-[14px] font-semibold text-[#111318]">
+                Realisasi Arus Kas &amp; Piutang Sewa
+              </h3>
+              <p className="text-[12px] text-[#6b7280] mt-0.5">
+                Perbandingan kas terbayar vs piutang sewa alat sepanjang periode operasional
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-[11px] text-[#6b7280] font-medium shrink-0">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: '#10b981' }} />
+                Kas Terbayar
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: '#f59e0b' }} />
+                Piutang
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-5 h-[2px] rounded-full" style={{ background: '#6366f1' }} />
+                Total Omset
+              </span>
+            </div>
+          </div>
+
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={monthlyRevenueData}
+                margin={{ top: 10, right: 12, left: 8, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="1 4" vertical={false} stroke="rgba(17,19,24,0.06)" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fill: '#9ca3af', fontSize: 10, fontFamily: 'monospace' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: '#9ca3af', fontSize: 10, fontFamily: 'monospace' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(val) => `${(val / 1000000).toFixed(0)} jt`}
+                />
+                <Tooltip content={<DarkTooltip />} />
+                <Bar
+                  dataKey="terbayar"
+                  name="terbayar"
+                  stackId="a"
+                  fill="#10b981"
+                  radius={[0, 0, 0, 0]}
+                  barSize={28}
+                />
+                <Bar
+                  dataKey="piutang"
+                  name="piutang"
+                  stackId="a"
+                  fill="#f59e0b"
+                  radius={[3, 3, 0, 0]}
+                  barSize={28}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="totalOmset"
+                  name="totalOmset"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  dot={{ r: 3.5, fill: '#6366f1', strokeWidth: 2, stroke: '#fefdfb' }}
+                  activeDot={{ r: 5 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* ── CHART 2 & 3: Utilization + Pie ── */}
+      {(activeTab === 'all' || activeTab === 'utilization') && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Left: Horizontal Bar — utilization by category */}
+          <div className={`${isOwner ? 'lg:col-span-7' : 'lg:col-span-12'} panel p-5`}>
+            <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-indigo-600" />
-                  Tren Pendapatan Rental & Realisasi Arus Kas Bulanan (Recharts Bar & Line)
-                </h3>
-                <p className="text-[11px] text-slate-500">
-                  Perbandingan penerimaan kas (terbayar) versus piutang sewa alat sepanjang periode operasional
+                <p className="section-label mb-0.5">Utilisasi per Kategori</p>
+                <h4 className="text-[14px] font-semibold text-[#111318]">
+                  Tingkat Utilisasi Stok (%)
+                </h4>
+                <p className="text-[12px] text-[#6b7280] mt-0.5">
+                  Persentase kapasitas alat yang teralokasi dalam booking aktif
                 </p>
               </div>
-              <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
-                  Kas Terbayar
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
-                  Piutang
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-1 bg-indigo-600 rounded-full" />
-                  Total Omset
-                </span>
-              </div>
+              <span className="badge-indigo text-[10px] font-mono shrink-0">Ambang Kritis: 80%</span>
             </div>
 
-            <div className="h-72 w-full pt-2">
+            <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={monthlyRevenueData}
-                  margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+                <BarChart
+                  data={categoryStats}
+                  layout="vertical"
+                  margin={{ top: 4, right: 28, left: 16, bottom: 4 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <CartesianGrid strokeDasharray="1 4" horizontal={false} stroke="rgba(17,19,24,0.06)" />
                   <XAxis
-                    dataKey="month"
-                    tick={{ fill: '#64748B', fontSize: 11 }}
-                    axisLine={{ stroke: '#CBD5E1' }}
+                    type="number"
+                    domain={[0, 100]}
+                    tick={{ fill: '#9ca3af', fontSize: 10, fontFamily: 'monospace' }}
+                    tickFormatter={(val) => `${val}%`}
+                    axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fill: '#64748B', fontSize: 10 }}
+                    dataKey="shortName"
+                    type="category"
+                    tick={{ fill: '#374151', fontSize: 11, fontWeight: 500 }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(val) => `Rp ${(val / 1000000).toFixed(0)}Jt`}
                   />
-                  <Tooltip
-                    formatter={(value: any, name: any) => {
-                      const label =
-                        name === 'terbayar'
-                          ? 'Kas Terbayar'
-                          : name === 'piutang'
-                          ? 'Sisa Piutang'
-                          : 'Total Omset Sewa';
-                      return [formatRupiah(Number(value)), label];
-                    }}
-                    labelStyle={{ fontWeight: 'bold', color: '#0F172A', fontSize: '12px' }}
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E8F0',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                      fontSize: '11px',
-                    }}
-                  />
+                  <Tooltip content={<UtilTooltip />} />
                   <Bar
-                    dataKey="terbayar"
-                    name="terbayar"
-                    stackId="a"
-                    fill="#10B981"
-                    radius={[0, 0, 0, 0]}
-                    barSize={32}
-                  />
-                  <Bar
-                    dataKey="piutang"
-                    name="piutang"
-                    stackId="a"
-                    fill="#F59E0B"
-                    radius={[4, 4, 0, 0]}
-                    barSize={32}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="totalOmset"
-                    name="totalOmset"
-                    stroke="#4F46E5"
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: '#4F46E5', strokeWidth: 2, stroke: '#FFFFFF' }}
-                    activeDot={{ r: 6 }}
-                  />
-                </ComposedChart>
+                    dataKey="utilizationRate"
+                    name="Utilisasi"
+                    barSize={14}
+                    radius={[0, 3, 3, 0]}
+                  >
+                    {categoryStats.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={
+                          entry.utilizationRate > 80
+                            ? '#be123c'
+                            : entry.utilizationRate >= 60
+                            ? '#4f46e5'
+                            : '#0ea5e9'
+                        }
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
-        )}
 
-        {/* CHART 2 & 3: Category Utilization Rate & Revenue Distribution */}
-        {(activeTab === 'all' || activeTab === 'utilization') && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
-            {/* Left: Bar Chart of Utilization Rate by Category */}
-            <div className={`${isOwner ? 'lg:col-span-7' : 'lg:col-span-12'} bg-slate-50/70 p-4 rounded-xl border border-slate-200`}>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-                    <Boxes className="w-4 h-4 text-indigo-600" />
-                    Tingkat Utilisasi Stok per Kategori (%)
-                  </h4>
-                  <p className="text-[11px] text-slate-500">
-                    Persentase kapasitas alat yang sedang teralokasi dalam jadwal booking aktif
-                  </p>
-                </div>
-                <span className="text-[10px] font-semibold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">
-                  Ambang Kritis: 80%
-                </span>
+            <div className="divider my-3" />
+            <div className="flex items-center gap-4 text-[11px] text-[#6b7280]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-sm" style={{ background: '#0ea5e9' }} />
+                &lt; 60% Tersedia
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-sm" style={{ background: '#4f46e5' }} />
+                60–80% Optimal
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-sm" style={{ background: '#be123c' }} />
+                &gt; 80% Kritis
+              </span>
+              <span className="ml-auto font-medium text-[#374151]">{equipmentList.length} model alat</span>
+            </div>
+          </div>
+
+          {/* Right: Donut — revenue contribution (Owner only) */}
+          {isOwner && (
+            <div className="lg:col-span-5 panel p-5 flex flex-col">
+              <div className="mb-4">
+                <p className="section-label mb-0.5">Kontribusi Omset</p>
+                <h4 className="text-[14px] font-semibold text-[#111318]">
+                  Distribusi per Kategori Alat
+                </h4>
+                <p className="text-[12px] text-[#6b7280] mt-0.5">
+                  Proporsi nilai sewa masing-masing divisi peralatan
+                </p>
               </div>
 
-              <div className="h-64 w-full">
+              <div className="h-44 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={categoryStats}
-                    layout="vertical"
-                    margin={{ top: 5, right: 25, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
-                    <XAxis
-                      type="number"
-                      domain={[0, 100]}
-                      tick={{ fill: '#64748B', fontSize: 10 }}
-                      tickFormatter={(val) => `${val}%`}
-                      axisLine={{ stroke: '#CBD5E1' }}
-                    />
-                    <YAxis
-                      dataKey="shortName"
-                      type="category"
-                      tick={{ fill: '#334155', fontSize: 11, fontWeight: 500 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      formatter={(val: any, name: any, item: any) => {
-                        const payload = item.payload;
-                        return [
-                          `${val}% (${payload.bookedUnits} dari ${payload.totalStock} Unit Terpakai)`,
-                          'Tingkat Utilisasi',
-                        ];
-                      }}
-                      contentStyle={{
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E8F0',
-                        fontSize: '11px',
-                      }}
-                    />
-                    <Bar
-                      dataKey="utilizationRate"
-                      name="Utilisasi"
-                      barSize={18}
-                      radius={[0, 4, 4, 0]}
+                  <PieChart>
+                    <Pie
+                      data={categoryStats}
+                      dataKey="revenue"
+                      nameKey="category"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={44}
+                      outerRadius={72}
+                      paddingAngle={3}
                     >
                       {categoryStats.map((entry, index) => (
                         <Cell
-                          key={`cell-${index}`}
-                          fill={
-                            entry.utilizationRate > 80
-                              ? '#EF4444' // Red if overbooked/critical
-                              : entry.utilizationRate >= 60
-                              ? '#4F46E5' // Indigo if healthy high
-                              : '#0EA5E9' // Sky if moderate
-                          }
+                          key={`pie-cell-${index}`}
+                          fill={PIE_COLORS[index % PIE_COLORS.length]}
                         />
                       ))}
-                    </Bar>
-                  </BarChart>
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }: any) => {
+                        if (!active || !payload?.length) return null;
+                        return (
+                          <div
+                            style={{
+                              background: '#1a1d24',
+                              border: '1px solid rgba(255,255,255,0.06)',
+                              borderRadius: '6px',
+                              padding: '8px 12px',
+                              fontSize: '11px',
+                              color: '#fff',
+                            }}
+                          >
+                            <div style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '3px' }}>
+                              {payload[0]?.name}
+                            </div>
+                            <div style={{ fontFamily: 'monospace' }}>
+                              {formatRupiah(Number(payload[0]?.value))}
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-200 mt-2">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-sky-500" />
-                    &lt; 60% Tersedia
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-indigo-600" />
-                    60-80% Optimal
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-red-500" />
-                    &gt; 80% Kritis / Bentrok
-                  </span>
-                </div>
-                <span className="font-medium text-slate-700">Total {equipmentList.length} Model Alat</span>
+              {/* Custom horizontal legend */}
+              <div className="divider my-3" />
+              <div className="grid grid-cols-2 gap-y-2 gap-x-3">
+                {categoryStats.map((cat, i) => (
+                  <div key={cat.category} className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
+                      />
+                      <span className="text-[11px] text-[#374151] truncate">{cat.shortName}</span>
+                    </div>
+                    <span className="font-mono text-[10px] text-[#6b7280] tabular-nums ml-2 shrink-0">
+                      {totalOctoberRevenue > 0
+                        ? `${Math.round((cat.revenue / totalOctoberRevenue) * 100)}%`
+                        : '0%'}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
+          )}
+        </div>
+      )}
 
-            {/* Right: Pie Chart of Revenue Contribution by Category (Only for Owner) */}
-            {isOwner && (
-              <div className="lg:col-span-5 bg-slate-50/70 p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5 mb-1">
-                    <PieChartIcon className="w-4 h-4 text-indigo-600" />
-                    Kontribusi Omset per Kategori Alat
-                  </h4>
-                  <p className="text-[11px] text-slate-500 mb-2">
-                    Proporsi nilai sewa yang dihasilkan masing-masing divisi peralatan
-                  </p>
-
-                  <div className="h-48 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={categoryStats}
-                          dataKey="revenue"
-                          nameKey="category"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={45}
-                          outerRadius={75}
-                          paddingAngle={3}
-                        >
-                          {categoryStats.map((entry, index) => (
-                            <Cell
-                              key={`pie-cell-${index}`}
-                              fill={PIE_COLORS[index % PIE_COLORS.length]}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value: any, name: any) => [
-                            formatRupiah(Number(value)),
-                            name,
-                          ]}
-                          contentStyle={{
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '8px',
-                            border: '1px solid #E2E8F0',
-                            fontSize: '11px',
+      {/* ── Top Equipment Performance Table ── */}
+      {topEquipmentData.length > 0 && (
+        <div className="panel">
+          <div className="px-5 pt-4 pb-3 border-b border-[rgba(17,19,24,0.08)]">
+            <p className="section-label mb-0.5">Performa Alat</p>
+            <h4 className="text-[14px] font-semibold text-[#111318]">
+              Top 5 Alat berdasarkan Utilisasi
+            </h4>
+          </div>
+          <table className="data-table w-full">
+            <thead>
+              <tr>
+                <th>Nama Alat</th>
+                <th>Kategori</th>
+                {isOwner && <th className="text-right">Pendapatan</th>}
+                <th className="text-right">Utilisasi</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topEquipmentData.map((eq, idx) => (
+                <tr key={eq.id} className={`table-row-hover stagger-${Math.min(idx + 1, 8) as 1}`}>
+                  <td>
+                    <span className="text-[13px] font-medium text-[#111318]">{eq.name}</span>
+                    <span className="block text-[11px] text-[#9ca3af] font-mono tabular-nums">
+                      {eq.bookedQty} / {eq.totalStock} unit
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-[12px] text-[#6b7280]">{eq.category}</span>
+                  </td>
+                  {isOwner && (
+                    <td className="text-right">
+                      <span className="font-mono tabular-nums text-[12px] text-[#374151]">
+                        {formatRupiah(eq.totalEarned)}
+                      </span>
+                    </td>
+                  )}
+                  <td className="text-right">
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="font-mono tabular-nums text-[12px] text-[#374151]">
+                        {eq.utilizationRate}%
+                      </span>
+                      <div className="progress-bar-track w-20" style={{ height: '3px' }}>
+                        <div
+                          className="progress-bar-fill"
+                          style={{
+                            width: `${Math.min(eq.utilizationRate, 100)}%`,
+                            background:
+                              eq.utilizationRate > 80
+                                ? '#be123c'
+                                : eq.utilizationRate >= 60
+                                ? '#4f46e5'
+                                : '#10b981',
                           }}
                         />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Legend List */}
-                <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-200 text-[11px]">
-                  {categoryStats.map((cat, i) => (
-                    <div key={cat.category} className="flex items-center justify-between pr-2">
-                      <div className="flex items-center gap-1.5 truncate">
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
-                        />
-                        <span className="truncate text-slate-700 font-medium">{cat.shortName}</span>
                       </div>
-                      <span className="font-mono text-slate-500 text-[10px]">
-                        {totalOctoberRevenue > 0
-                          ? `${Math.round((cat.revenue / totalOctoberRevenue) * 100)}%`
-                          : '0%'}
-                      </span>
                     </div>
-                  ))}
-                </div>
+                  </td>
+                  <td>
+                    {eq.hasConflict ? (
+                      <span className="badge-carmine">Konflik</span>
+                    ) : eq.utilizationRate > 80 ? (
+                      <span className="badge-amber">Kritis</span>
+                    ) : (
+                      <span className="badge-emerald">Normal</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Accounts Receivable Section (Owner only) ── */}
+      {isOwner && totalOctoberUnpaid > 0 && (
+        <div>
+          <div className="flex items-end justify-between mb-4">
+            <div>
+              <p className="section-label mb-1">Piutang Belum Lunas</p>
+              <div className="metric-figure-mono" style={{ color: '#be123c' }}>
+                {formatRupiah(totalOctoberUnpaid)}
               </div>
-            )}
-          </div>
-        )}
-
-        {/* TOP ASSETS & STRATEGIC RECOMMENDATIONS */}
-        <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-xl border border-slate-800">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 bg-indigo-600 rounded-lg text-white">
-                <Sparkles className="w-4 h-4" />
-              </span>
-              <h4 className="text-xs sm:text-sm font-bold text-white tracking-tight">
-                {isOwner
-                  ? 'Rekomendasi Manajemen Inventaris & Investasi Alat'
-                  : 'Protokol Gudang & Pemeliharaan Stok Fisik'}
-              </h4>
+              <p className="text-[12px] text-[#6b7280] mt-1">
+                {bookings.filter((b) => b.paymentStatus !== 'Lunas').length} invoice menunggu pelunasan
+              </p>
             </div>
-            <span className="text-[10px] font-mono text-indigo-300 bg-indigo-950/60 border border-indigo-800/80 px-2 py-0.5 rounded self-start sm:self-auto">
-              {isOwner ? 'Insight Finansial' : 'Protokol Gudang'}
-            </span>
+            {onNavigateToInvoice && (
+              <button onClick={onNavigateToInvoice} className="btn-ghost text-[13px] flex items-center gap-1.5 mb-1">
+                Lihat Semua Invoice
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-300">
-            {isOwner ? (
-              <>
-                <div className="bg-slate-800/70 p-3 rounded-lg border border-slate-700">
-                  <span className="font-semibold text-rose-400 block mb-1">
-                    ⚠️ Peringatan Over-Allocation:
-                  </span>
-                  <p className="text-[11px] leading-relaxed text-slate-300">
-                    <strong>Sony Alpha A7 III Body</strong> dan <strong>LED Videowall P3.9</strong> mendekati kapasitas &gt;90% pada tanggal 15-17 Oktober. Sistem mendeteksi bentrok jadwal yang perlu disubstitusi atau disewa silang (*sub-rent*).
-                  </p>
-                </div>
-
-                <div className="bg-slate-800/70 p-3 rounded-lg border border-slate-700">
-                  <span className="font-semibold text-emerald-400 block mb-1">
-                    ✓ Penghasil Omset Tertinggi:
-                  </span>
-                  <p className="text-[11px] leading-relaxed text-slate-300">
-                    Divisi <strong>Audio & Sound</strong> menyumbang nilai sewa terbesar bulan ini melalui paket Line Array RCF dan Digital Mixer Yamaha CL5 dengan tingkat pengembalian tepat waktu 100%.
-                  </p>
-                </div>
-
-                <div className="bg-slate-800/70 p-3 rounded-lg border border-slate-700">
-                  <span className="font-semibold text-indigo-400 block mb-1">
-                    💡 Peluang Investasi Alat Baru:
-                  </span>
-                  <p className="text-[11px] leading-relaxed text-slate-300">
-                    Tingkat utilisasi Lighting Beam 260W selalu penuh pada akhir pekan. Menambah 4 unit tambahan diproyeksikan meningkatkan kapasitas booking hingga +Rp 18.000.000/bulan.
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="bg-slate-800/70 p-3 rounded-lg border border-slate-700">
-                  <span className="font-semibold text-rose-400 block mb-1">
-                    ⚠️ Stok Menipis & Kritis:
-                  </span>
-                  <p className="text-[11px] leading-relaxed text-slate-300">
-                    Periksa alokasi <strong>Sony Alpha A7 III</strong> dan <strong>LED Videowall</strong>. Stok fisik di rak gudang tersisa sangat sedikit untuk jadwal event aktif.
-                  </p>
-                </div>
-
-                <div className="bg-slate-800/70 p-3 rounded-lg border border-slate-700">
-                  <span className="font-semibold text-amber-400 block mb-1">
-                    🔍 QC Fisik & Aksesoris:
-                  </span>
-                  <p className="text-[11px] leading-relaxed text-slate-300">
-                    Lakukan pemeriksaan visual menyeluruh pada unit audio & lighting yang baru kembali: cek grounding kabel power, pin XLR, dan kelengkapan hardcase.
-                  </p>
-                </div>
-
-                <div className="bg-slate-800/70 p-3 rounded-lg border border-slate-700">
-                  <span className="font-semibold text-emerald-400 block mb-1">
-                    ✓ Kesiapan Rak & Standby:
-                  </span>
-                  <p className="text-[11px] leading-relaxed text-slate-300">
-                    Pastikan baterai cadangan terisi penuh dan label QR/barcode pada tiap flight case dapat terbaca sebelum unit dimuat ke kendaraan loading.
-                  </p>
-                </div>
-              </>
-            )}
+          <div className="panel">
+            <table className="data-table w-full">
+              <thead>
+                <tr>
+                  <th>Klien / Event</th>
+                  <th className="text-right">Total</th>
+                  <th className="text-right">Terbayar</th>
+                  <th className="text-right">Sisa</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings
+                  .filter((b) => b.paymentStatus !== 'Lunas')
+                  .slice(0, 5)
+                  .map((b, idx) => (
+                    <tr key={b.id} className="table-row-hover">
+                      <td>
+                        <span className="text-[13px] font-medium text-[#111318]">{b.clientName}</span>
+                        <span className="block text-[11px] text-[#9ca3af] font-mono tabular-nums">
+                          {b.eventName}
+                        </span>
+                      </td>
+                      <td className="text-right font-mono tabular-nums text-[12px] text-[#374151]">
+                        {formatRupiah(b.totalAmount)}
+                      </td>
+                      <td className="text-right font-mono tabular-nums text-[12px] text-[#059669]">
+                        {formatRupiah(b.paidAmount)}
+                      </td>
+                      <td className="text-right font-mono tabular-nums text-[12px] text-[#be123c]">
+                        {formatRupiah(b.totalAmount - b.paidAmount)}
+                      </td>
+                      <td>
+                        {b.paymentStatus === 'DP 50%' ? (
+                          <span className="badge-amber">DP 50%</span>
+                        ) : b.paymentStatus === 'Belum Bayar' ? (
+                          <span className="badge-carmine">Belum Bayar</span>
+                        ) : (
+                          <span className="badge-ink">{b.paymentStatus}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
         </div>
+      )}
+
+      {/* ── Operational Notes Panel ── */}
+      <div className="panel p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="section-label mb-0.5">
+              {isOwner ? 'Rekomendasi Manajemen' : 'Protokol Gudang'}
+            </p>
+            <h4 className="text-[14px] font-semibold text-[#111318]">
+              {isOwner
+                ? 'Inventaris & Investasi Alat'
+                : 'Pemeliharaan Stok Fisik'}
+            </h4>
+          </div>
+          <span className="font-mono text-[10px] badge-indigo">
+            {isOwner ? 'Insight Finansial' : 'Protokol Gudang'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {isOwner ? (
+            <>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#be123c]" />
+                  <span className="text-[12px] font-semibold text-[#be123c]">Over-Allocation</span>
+                </div>
+                <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                  <strong className="text-[#374151]">Sony Alpha A7 III</strong> dan{' '}
+                  <strong className="text-[#374151]">LED Videowall P3.9</strong> mendekati kapasitas &gt;90% pada
+                  15–17 Oktober. Sistem mendeteksi bentrok jadwal yang perlu disubstitusi atau sub-rent.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
+                  <span className="text-[12px] font-semibold text-[#059669]">Penghasil Omset Tertinggi</span>
+                </div>
+                <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                  Divisi <strong className="text-[#374151]">Audio &amp; Sound</strong> menyumbang nilai sewa terbesar
+                  bulan ini melalui paket Line Array RCF dan Digital Mixer Yamaha CL5 dengan tingkat pengembalian
+                  tepat waktu 100%.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5 text-[#4f46e5]" />
+                  <span className="text-[12px] font-semibold text-[#4f46e5]">Peluang Investasi</span>
+                </div>
+                <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                  Tingkat utilisasi Lighting Beam 260W selalu penuh pada akhir pekan. Menambah 4 unit diproyeksikan
+                  meningkatkan kapasitas booking hingga +Rp 18.000.000/bulan.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#be123c]" />
+                  <span className="text-[12px] font-semibold text-[#be123c]">Stok Menipis</span>
+                </div>
+                <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                  Periksa alokasi <strong className="text-[#374151]">Sony Alpha A7 III</strong> dan{' '}
+                  <strong className="text-[#374151]">LED Videowall</strong>. Stok fisik di rak gudang tersisa sangat
+                  sedikit untuk jadwal event aktif.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Boxes className="w-3.5 h-3.5 text-[#d97706]" />
+                  <span className="text-[12px] font-semibold text-[#d97706]">QC Fisik &amp; Aksesoris</span>
+                </div>
+                <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                  Lakukan pemeriksaan visual menyeluruh pada unit audio &amp; lighting yang baru kembali: cek
+                  grounding kabel power, pin XLR, dan kelengkapan hardcase.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
+                  <span className="text-[12px] font-semibold text-[#059669]">Kesiapan Rak &amp; Standby</span>
+                </div>
+                <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                  Pastikan baterai cadangan terisi penuh dan label QR/barcode pada tiap flight case dapat terbaca
+                  sebelum unit dimuat ke kendaraan loading.
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </div>
+
     </div>
   );
 };

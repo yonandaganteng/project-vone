@@ -5,10 +5,8 @@ import {
   Search,
   CheckCircle2,
   AlertTriangle,
-  FolderTree,
   Tag,
   MapPin,
-  Sparkles,
   Edit,
   Pencil,
   Wrench,
@@ -17,7 +15,6 @@ import {
   X,
   Layers,
   Check,
-  Info,
   Trash2,
 } from 'lucide-react';
 import { Equipment, EventBooking, UserRole } from '../types/rental';
@@ -214,271 +211,292 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     }));
   };
 
+  // Utilization calculation: how many units are currently booked
+  const getUtilization = (eq: Equipment) => {
+    const activeBookings = bookings.filter(
+      (b) =>
+        b.status !== 'Dibatalkan' &&
+        b.items.some((item) => item.equipmentId === eq.id)
+    );
+    const booked = activeBookings.reduce((acc, b) => {
+      const item = b.items.find((i) => i.equipmentId === eq.id);
+      return acc + (item?.quantity || 0);
+    }, 0);
+    const used = Math.min(booked, eq.totalStock);
+    const pct = eq.totalStock > 0 ? (used / eq.totalStock) * 100 : 0;
+    return { used, total: eq.totalStock, pct };
+  };
+
+  const getUtilizationColor = (pct: number) => {
+    if (pct >= 90) return '#be123c';   // carmine
+    if (pct >= 60) return '#d97706';   // amber
+    return '#059669';                   // emerald
+  };
+
+  const conditionBadge = (condition: Equipment['condition']) => {
+    if (condition === 'Sangat Baik') return 'badge-emerald';
+    if (condition === 'Baik') return 'badge-amber';
+    return 'badge-carmine';
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Toast Notification */}
-      {successToast && (
-        <div className="fixed top-20 right-6 z-50 bg-emerald-900/95 text-white px-4 py-3 rounded-xl shadow-2xl border border-emerald-500/50 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-200">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          <div className="text-xs">
-            <p className="font-bold">Perubahan Berhasil Disimpan</p>
-            <p className="text-emerald-200 text-[11px] mt-0.5">{successToast}</p>
+    <div className="relative min-h-screen">
+      {/* Ambient background */}
+      <div className="ambient-inventory absolute inset-0 z-0 pointer-events-none" />
+
+      {/* All content above ambient */}
+      <div className="relative z-10 space-y-5 animate-page-enter">
+
+        {/* ── Toast Notification ── */}
+        {successToast && (
+          <div className="fixed top-[72px] right-5 z-[60] toast toast-success animate-toast-enter flex items-start gap-3 max-w-sm">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-[12px] text-white">Perubahan Tersimpan</p>
+              <p className="text-[11px] text-emerald-200 mt-0.5 leading-relaxed">{successToast}</p>
+            </div>
+            <button
+              onClick={() => setSuccessToast(null)}
+              className="ml-auto text-emerald-300 hover:text-white transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
+        )}
+
+        {/* ── Page Header (sits directly on page, no card) ── */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-1">
+          <div>
+            <div className="flex items-center gap-2.5 mb-1">
+              <Boxes className="w-4 h-4 text-indigo-500" />
+              <h1 className="text-[18px] font-bold tracking-tight text-[#111318]">
+                Master Katalog Alat &amp; Tarif Sewa
+              </h1>
+              <span className="badge-indigo font-mono text-[10px]">
+                {equipmentList.length} item
+              </span>
+            </div>
+            <p className="font-mono text-[11px] text-[#6b7280]">
+              INVENTORY · {filteredEquipment.length} ditampilkan
+              {selectedCategory !== 'Semua' && ` · ${selectedCategory}`}
+            </p>
+          </div>
+
           <button
-            onClick={() => setSuccessToast(null)}
-            className="text-emerald-300 hover:text-white ml-2 text-sm"
+            onClick={() => setShowAddModal(true)}
+            className="btn-primary btn-magnetic inline-flex items-center gap-2 text-[13px] shrink-0"
           >
-            ✕
+            <Plus className="w-4 h-4" />
+            Tambah Alat Baru
           </button>
         </div>
-      )}
 
-      {/* Header & Controls */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <Boxes className="w-5 h-5" />
-            </span>
-            <h2 className="text-base font-bold text-slate-900 tracking-tight">
-              Master Katalog Alat & Tarif Sewa
-            </h2>
-            <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full">
-              {equipmentList.length} Item Terdaftar
-            </span>
+        {/* ── Filter & Search row ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+          {/* Search */}
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af]" />
+            <input
+              type="text"
+              placeholder="Cari kode, nama, brand..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="field-input pl-9 py-2 text-[12px] w-full"
+            />
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Anda dapat mengubah <strong className="text-slate-800">Nama Alat</strong>,{' '}
-            <strong className="text-slate-800">Tarif Sewa/Harga</strong>, dan{' '}
-            <strong className="text-slate-800">Deskripsi/Spesifikasi</strong> seluruh peralatan rental. Perubahan langsung terupdate ke pemesanan baru dan invoice.
-          </p>
+
+          {/* Category text-link tabs */}
+          <div className="flex items-center gap-0 overflow-x-auto">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 text-[12px] font-medium whitespace-nowrap transition-all border-b-2 ${
+                  selectedCategory === cat
+                    ? 'border-[#4f46e5] text-[#4f46e5]'
+                    : 'border-transparent text-[#6b7280] hover:text-[#111318] hover:border-[#d1d5db]'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5 shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Tambah Alat Baru</span>
-        </button>
-      </div>
+        {/* ── Equipment Table ── */}
+        <div className="panel overflow-hidden">
+          {filteredEquipment.length === 0 ? (
+            <div className="py-20 text-center">
+              <p className="section-label mb-2">Tidak Ada Alat Ditemukan</p>
+              <p className="text-[13px] text-[#9ca3af]">
+                {searchQuery
+                  ? `Tidak ada hasil untuk "${searchQuery}"`
+                  : 'Belum ada alat di kategori ini. Tambahkan alat baru.'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="data-table w-full">
+                <thead>
+                  <tr>
+                    <th className="py-3 px-4 text-left">Kode / Nama Alat</th>
+                    <th className="py-3 px-4 text-left">Kategori</th>
+                    <th className="py-3 px-4 text-left">Rak &amp; Kondisi</th>
+                    <th className="py-3 px-4 text-center">Stok &amp; Utilisasi</th>
+                    <th className="py-3 px-4 text-right">Tarif / Hari</th>
+                    <th className="py-3 px-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEquipment.map((eq, idx) => {
+                    const util = getUtilization(eq);
+                    const utilColor = getUtilizationColor(util.pct);
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari kode, nama, deskripsi atau brand alat..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div className="flex gap-1 overflow-x-auto w-full sm:w-auto pb-1">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                selectedCategory === cat
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Equipment Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-semibold text-[10px] tracking-wider">
-              <tr>
-                <th className="py-3 px-4 min-w-[280px]">Nama Alat & Deskripsi</th>
-                <th className="py-3 px-4">Kategori & Brand</th>
-                <th className="py-3 px-4">Lokasi Rak</th>
-                <th className="py-3 px-4 text-center">Total Stok</th>
-                <th className="py-3 px-4 text-right min-w-[150px]">Tarif Sewa / Hari</th>
-                <th className="py-3 px-4 text-center">Kondisi</th>
-                <th className="py-3 px-4 text-center min-w-[150px]">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredEquipment.map((eq) => {
-                return (
-                  <tr key={eq.id} className="hover:bg-slate-50/80 transition-colors group">
-                    {/* Nama & Deskripsi */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-900 text-xs">{eq.name}</span>
-                            <button
-                              onClick={() => handleOpenEditModal(eq)}
-                              className="text-slate-400 hover:text-indigo-600 opacity-60 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                              title="Edit nama, harga & deskripsi alat ini"
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <div className="font-mono text-[11px] text-slate-500 mt-0.5">
+                    return (
+                      <tr
+                        key={eq.id}
+                        className={`table-row-hover group relative stagger-${Math.min(idx + 1, 8) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`}
+                      >
+                        {/* Code + Name */}
+                        <td className="py-3 px-4">
+                          <div className="font-mono text-[11px] text-[#9ca3af] mb-0.5 tracking-wide">
                             {eq.code}
                           </div>
-                        </div>
-                      </div>
+                          <div className="text-[13px] font-medium text-[#111318] leading-snug">
+                            {eq.name}
+                          </div>
+                          {eq.description && (
+                            <p className="text-[11px] text-[#9ca3af] mt-0.5 line-clamp-1">
+                              {eq.description}
+                            </p>
+                          )}
+                        </td>
 
-                      {/* Deskripsi Barang */}
-                      {eq.description ? (
-                        <p className="text-[11px] text-slate-600 mt-1.5 line-clamp-2 leading-relaxed bg-slate-50/80 p-1.5 rounded border border-slate-100/80">
-                          {eq.description}
-                        </p>
-                      ) : (
-                        <button
-                          onClick={() => handleOpenEditModal(eq)}
-                          className="text-[10px] text-indigo-500 hover:text-indigo-700 hover:underline mt-1.5 flex items-center gap-1"
-                        >
-                          <Pencil className="w-2.5 h-2.5" />
-                          <span>+ Tambah deskripsi & spesifikasi</span>
-                        </button>
-                      )}
-                    </td>
+                        {/* Category */}
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span className="badge-ink text-[11px]">{eq.category}</span>
+                          <div className="text-[11px] text-[#9ca3af] mt-1">{eq.brand}</div>
+                        </td>
 
-                    {/* Kategori & Brand */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="font-medium text-slate-800">{eq.category}</div>
-                      <div className="text-[11px] text-slate-500">{eq.brand}</div>
-                    </td>
-
-                    {/* Lokasi Rak */}
-                    <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono text-[11px]">
-                      {eq.locationRack}
-                    </td>
-
-                    {/* Total Stok Fisik */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <div className="font-mono font-bold text-slate-900 text-sm">
-                        {eq.totalStock} Unit
-                      </div>
-                      <span className="text-[10px] text-slate-400">
-                        {eq.serialNumbers?.length || eq.totalStock} S/N Terdaftar
-                      </span>
-                    </td>
-
-                    {/* Tarif Sewa / Hari (Harga) */}
-                    <td className="py-3.5 px-4 text-right font-mono tabular-nums text-slate-900 whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <span className="font-bold text-slate-900 text-xs">
-                          {formatRupiah(eq.dailyRate)}
-                        </span>
-                        <button
-                          onClick={() => handleOpenEditModal(eq)}
-                          className="text-slate-400 hover:text-indigo-600 opacity-60 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                          title="Ubah tarif harga sewa"
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </button>
-                      </div>
-                      <span className="text-[10px] text-slate-400 font-sans block mt-0.5">
-                        per hari
-                      </span>
-                    </td>
-
-                    {/* Kondisi Fisik */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${
-                            eq.condition === 'Sangat Baik'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : eq.condition === 'Baik'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
-                        >
-                          {eq.condition}
-                        </span>
-                        <button
-                          onClick={() =>
-                            setEditingConditionEq({
-                              id: eq.id,
-                              name: eq.name,
-                              condition: eq.condition,
-                              locationRack: eq.locationRack,
-                            })
-                          }
-                          className={`px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors ${
-                            userRole === 'warehouse'
-                              ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300'
-                              : 'hover:bg-slate-200 text-slate-500 hover:text-indigo-600'
-                          }`}
-                          title="Ubah status kondisi fisik alat & rak (Role Staf Gudang)"
-                        >
-                          <Pencil className="w-2.5 h-2.5" />
-                          <span className={userRole === 'warehouse' ? 'inline' : 'hidden sm:inline'}>
-                            Kondisi
+                        {/* Rack + Condition */}
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <div className="font-mono text-[11px] text-[#6b7280] font-bold mb-1.5">
+                            {eq.locationRack}
+                          </div>
+                          <span className={`${conditionBadge(eq.condition)} text-[11px]`}>
+                            {eq.condition}
                           </span>
-                        </button>
-                      </div>
-                    </td>
+                        </td>
 
-                    {/* Aksi / Edit & Hapus Alat */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => handleOpenEditModal(eq)}
-                          className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 hover:border-indigo-600 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-all shadow-xs"
-                          title="Ubah nama, tarif sewa, dan deskripsi alat"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          onClick={() => setEquipmentToDelete(eq)}
-                          className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-all shadow-xs"
-                          title="Hapus alat ini dari database master (terhapus di seluruh role)"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Hapus</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        {/* Stock + utilization */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                            <span className="font-mono text-[12px] text-[#111318] tabular-nums">
+                              {util.used} / {util.total}
+                            </span>
+                            <span className="text-[11px] text-[#9ca3af]">unit</span>
+                          </div>
+                          {/* Utilization progress bar */}
+                          <div className="progress-bar-track w-24 mx-auto">
+                            <div
+                              className="progress-bar-fill"
+                              style={{
+                                width: `${util.pct}%`,
+                                backgroundColor: utilColor,
+                              }}
+                            />
+                          </div>
+                          <div className="text-center font-mono text-[10px] mt-0.5" style={{ color: utilColor }}>
+                            {Math.round(util.pct)}%
+                          </div>
+                        </td>
+
+                        {/* Daily Rate */}
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <div className="font-mono tabular-nums text-[12px] text-[#111318] font-semibold">
+                            {formatRupiah(eq.dailyRate)}
+                          </div>
+                          <div className="text-[10px] text-[#9ca3af] mt-0.5">per hari</div>
+                        </td>
+
+                        {/* Actions — slide in on hover */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-150 translate-x-1 group-hover:translate-x-0">
+                            <button
+                              onClick={() => handleOpenEditModal(eq)}
+                              className="btn-ghost inline-flex items-center gap-1 text-[11px] py-1 px-2"
+                              title="Edit alat"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() =>
+                                setEditingConditionEq({
+                                  id: eq.id,
+                                  name: eq.name,
+                                  condition: eq.condition,
+                                  locationRack: eq.locationRack,
+                                })
+                              }
+                              className={`inline-flex items-center gap-1 text-[11px] py-1 px-2 rounded border transition-all ${
+                                userRole === 'warehouse'
+                                  ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                                  : 'btn-ghost'
+                              }`}
+                              title="Update kondisi"
+                            >
+                              <Wrench className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => setEquipmentToDelete(eq)}
+                              className="inline-flex items-center gap-1 text-[11px] py-1 px-2 rounded border border-transparent hover:border-[#be123c]/30 text-[#be123c] hover:bg-[#be123c]/10 transition-all"
+                              title="Hapus alat"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ======================================================== */}
-      {/* MODAL: EDIT DETAIL LENGKAP ALAT (HARGA, NAMA, DESKRIPSI) */}
-      {/* ======================================================== */}
+      {/* ================================================================ */}
+      {/* MODAL: EDIT DETAIL LENGKAP ALAT (HARGA, NAMA, DESKRIPSI)         */}
+      {/* ================================================================ */}
       {editingEquipment && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto animate-backdrop-enter"
+          style={{ background: 'rgba(10,11,14,0.72)', backdropFilter: 'blur(4px)' }}
+        >
           <form
             onSubmit={handleSaveEditEquipment}
-            className="bg-white rounded-xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8"
+            className="animate-dialog-enter max-w-lg w-full my-8 rounded-xl overflow-hidden border border-white/[0.06]"
+            style={{ background: '#1a1d24' }}
           >
             {/* Modal Header */}
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-indigo-600 rounded-lg text-white">
-                  <Pencil className="w-4 h-4" />
+            <div
+              className="px-5 py-4 flex items-center justify-between border-b"
+              style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="p-1.5 bg-indigo-600/20 rounded-lg">
+                  <Pencil className="w-4 h-4 text-indigo-400" />
                 </span>
                 <div>
-                  <h3 className="font-bold text-sm text-white">
-                    Edit Detail Master Alat Rental
-                  </h3>
+                  <h3 className="text-[13px] font-bold text-white">Edit Master Alat Rental</h3>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-mono text-[11px] text-indigo-300">
-                      {editingEquipment.code}
-                    </span>
-                    <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded border border-slate-700">
+                    <span className="font-mono text-[11px] text-indigo-400">{editingEquipment.code}</span>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded"
+                      style={{ background: 'rgba(255,255,255,0.06)', color: '#9ca3af' }}
+                    >
                       {editingEquipment.category}
                     </span>
                   </div>
@@ -487,51 +505,89 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setEditingEquipment(null)}
-                className="text-slate-400 hover:text-white text-base p-1"
+                className="text-[#6b7280] hover:text-white transition-colors p-1"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Modal Form Body */}
-            <div className="p-5 space-y-4 text-xs max-h-[75vh] overflow-y-auto">
-              {/* 1. NAMA ALAT */}
+            {/* Modal Body */}
+            <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Section: Basic Info */}
+              <p className="section-label">Informasi Dasar</p>
+
+              {/* Nama Alat */}
               <div>
-                <label className="font-bold text-slate-900 block mb-1 flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Nama Lengkap Alat Rental:</span>
-                  <span className="text-rose-500">*</span>
+                <label className="field-label mb-1.5 flex items-center gap-1.5">
+                  <Tag className="w-3 h-3 text-indigo-400" />
+                  Nama Lengkap Alat
+                  <span className="text-[#be123c] ml-0.5">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={editFormData.name}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, name: e.target.value })
-                  }
-                  placeholder="Contoh: Sony Alpha A7 III Body + Cage"
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-xs"
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  placeholder="cth: Sony Alpha A7 III Body + Cage"
+                  className="field-input w-full text-[12px]"
                 />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Nama ini akan dicetak pada penawaran, invoice snapshot, dan surat jalan manifest.
+                <p className="text-[10px] mt-1" style={{ color: '#6b7280' }}>
+                  Akan dicetak di penawaran, invoice, dan surat jalan manifest.
                 </p>
               </div>
 
-              {/* 2. TARIF SEWA / HARGA */}
-              <div className="p-3.5 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-2">
+              {/* Kategori & Brand */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="field-label mb-1.5">Kategori</label>
+                  <select
+                    value={editFormData.category}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, category: e.target.value as Equipment['category'] })
+                    }
+                    className="field-input w-full text-[12px]"
+                  >
+                    <option value="Kamera & Lensa">Kamera &amp; Lensa</option>
+                    <option value="Audio & Sound">Audio &amp; Sound</option>
+                    <option value="Lighting & Effect">Lighting &amp; Effect</option>
+                    <option value="Visual & LED">Visual &amp; LED</option>
+                    <option value="Rigging & Truss">Rigging &amp; Truss</option>
+                    <option value="Power & Kabel">Power &amp; Kabel</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="field-label mb-1.5">Brand / Merek</label>
+                  <input
+                    type="text"
+                    value={editFormData.brand}
+                    onChange={(e) => setEditFormData({ ...editFormData, brand: e.target.value })}
+                    className="field-input w-full text-[12px]"
+                  />
+                </div>
+              </div>
+
+              {/* Section: Pricing */}
+              <p className="section-label mt-2">Tarif Sewa</p>
+
+              <div
+                className="p-3.5 rounded-lg border space-y-2.5"
+                style={{ background: 'rgba(79,70,229,0.06)', borderColor: 'rgba(79,70,229,0.2)' }}
+              >
                 <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-900 flex items-center gap-1.5">
-                    <DollarSign className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Tarif Sewa / Hari (Harga Rental):</span>
-                    <span className="text-rose-500">*</span>
+                  <label className="field-label flex items-center gap-1.5">
+                    <DollarSign className="w-3 h-3 text-indigo-400" />
+                    Tarif / Hari
+                    <span className="text-[#be123c]">*</span>
                   </label>
-                  <span className="font-mono font-bold text-indigo-700 text-xs">
+                  <span className="font-mono text-[12px] font-bold text-indigo-400">
                     {formatRupiah(editFormData.dailyRate)} / hari
                   </span>
                 </div>
-
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-500 text-xs">
+                  <span
+                    className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[11px] font-bold"
+                    style={{ color: '#9ca3af' }}
+                  >
                     Rp
                   </span>
                   <input
@@ -541,198 +597,142 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     required
                     value={editFormData.dailyRate}
                     onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        dailyRate: parseInt(e.target.value, 10) || 0,
-                      })
+                      setEditFormData({ ...editFormData, dailyRate: parseInt(e.target.value, 10) || 0 })
                     }
-                    className="w-full pl-9 pr-3 py-2 border border-indigo-200 bg-white rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                    className="field-input w-full pl-9 font-mono text-[12px]"
                   />
                 </div>
-
-                {/* Quick rate adjustment chips */}
-                <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] text-slate-500">Sesuaikan cepat:</span>
-                  <button
-                    type="button"
-                    onClick={() => adjustEditPrice(-50000)}
-                    className="px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-100 rounded text-[10px] font-mono font-medium text-slate-700"
-                  >
-                    -50rb
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => adjustEditPrice(50000)}
-                    className="px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-100 rounded text-[10px] font-mono font-medium text-indigo-600"
-                  >
-                    +50rb
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => adjustEditPrice(100000)}
-                    className="px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-100 rounded text-[10px] font-mono font-medium text-indigo-600"
-                  >
-                    +100rb
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => adjustEditPrice(250000)}
-                    className="px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-100 rounded text-[10px] font-mono font-medium text-indigo-600"
-                  >
-                    +250rb
-                  </button>
+                {/* Quick adjustment chips */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px]" style={{ color: '#6b7280' }}>Sesuaikan:</span>
+                  {[-50000, 50000, 100000, 250000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => adjustEditPrice(amt)}
+                      className="px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-colors"
+                      style={{
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: amt < 0 ? '#f87171' : '#818cf8',
+                      }}
+                    >
+                      {amt > 0 ? '+' : ''}{amt / 1000}rb
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* 3. DESKRIPSI & SPESIFIKASI ALAT */}
-              <div>
-                <label className="font-bold text-slate-900 block mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Deskripsi & Spesifikasi Alat:</span>
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-normal">
-                    {editFormData.description.length} karakter
-                  </span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={editFormData.description}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, description: e.target.value })
-                  }
-                  placeholder="Jelaskan spesifikasi teknis, kelengkapan aksesori bawaan (kabel, tas/flight case, baterai cadangan), atau catatan khusus pemakaian..."
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 leading-relaxed shadow-xs"
-                />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Deskripsi membantu tim operasional, admin penawaran, dan klien mengetahui detail teknis perlengkapan.
-                </p>
-              </div>
+              {/* Section: Location & Condition */}
+              <p className="section-label mt-2">Lokasi &amp; Kondisi</p>
 
-              {/* 4. KATEGORI & BRAND */}
-              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Kategori:</label>
-                  <select
-                    value={editFormData.category}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        category: e.target.value as Equipment['category'],
-                      })
-                    }
-                    className="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white text-slate-900"
-                  >
-                    <option value="Kamera & Lensa">Kamera & Lensa</option>
-                    <option value="Audio & Sound">Audio & Sound</option>
-                    <option value="Lighting & Effect">Lighting & Effect</option>
-                    <option value="Visual & LED">Visual & LED</option>
-                    <option value="Rigging & Truss">Rigging & Truss</option>
-                    <option value="Power & Kabel">Power & Kabel</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Brand / Merek:</label>
-                  <input
-                    type="text"
-                    value={editFormData.brand}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, brand: e.target.value })
-                    }
-                    className="w-full p-2 border border-slate-300 rounded-lg text-xs text-slate-900"
-                  />
-                </div>
-              </div>
-
-              {/* 5. TOTAL STOK FISIK & LOKASI RAK */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Total Stok Fisik:
-                  </label>
+                  <label className="field-label mb-1.5">Total Stok Fisik</label>
                   <input
                     type="number"
                     min={1}
                     required
                     value={editFormData.totalStock}
                     onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        totalStock: parseInt(e.target.value, 10) || 1,
-                      })
+                      setEditFormData({ ...editFormData, totalStock: parseInt(e.target.value, 10) || 1 })
                     }
-                    className="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                    className="field-input w-full font-mono text-[12px]"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Lokasi Rak di Gudang:
+                  <label className="field-label mb-1.5 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-indigo-400" />
+                    Lokasi Rak
                   </label>
                   <input
                     type="text"
                     value={editFormData.locationRack}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, locationRack: e.target.value })
-                    }
-                    className="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
+                    onChange={(e) => setEditFormData({ ...editFormData, locationRack: e.target.value })}
+                    className="field-input w-full font-mono text-[12px]"
                   />
                 </div>
               </div>
 
-              {/* 6. KONDISI FISIK */}
+              {/* Condition toggle */}
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Kondisi Fisik:</label>
+                <label className="field-label mb-2">Kondisi Fisik</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['Sangat Baik', 'Baik', 'Perlu Servis'] as const).map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setEditFormData({ ...editFormData, condition: c })}
-                      className={`py-1.5 px-2 text-center rounded-lg font-bold border text-xs transition-all ${
+                      className={`py-2 px-2 text-center rounded-lg text-[11px] font-semibold border transition-all ${
                         editFormData.condition === c
                           ? c === 'Sangat Baik'
                             ? 'bg-emerald-600 text-white border-emerald-600'
                             : c === 'Baik'
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-amber-600 text-white border-amber-600'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            ? 'bg-amber-500 text-white border-amber-500'
+                            : 'bg-[#be123c] text-white border-[#be123c]'
+                          : 'text-[#9ca3af] border-white/10 hover:border-white/20'
                       }`}
+                      style={
+                        editFormData.condition !== c
+                          ? { background: 'rgba(255,255,255,0.04)' }
+                          : {}
+                      }
                     >
                       {c}
                     </button>
                   ))}
                 </div>
               </div>
+
+              {/* Section: Description */}
+              <p className="section-label mt-2">Deskripsi &amp; Spesifikasi</p>
+              <div>
+                <label className="field-label mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <FileText className="w-3 h-3 text-indigo-400" />
+                    Deskripsi Alat
+                  </span>
+                  <span className="text-[10px] font-normal" style={{ color: '#6b7280' }}>
+                    {editFormData.description.length} karakter
+                  </span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  placeholder="Spesifikasi teknis, kelengkapan aksesori, catatan khusus pemakaian..."
+                  className="field-input w-full text-[12px] leading-relaxed"
+                />
+              </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+            <div
+              className="px-5 py-3.5 flex items-center justify-between border-t"
+              style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}
+            >
               <button
                 type="button"
                 onClick={() => {
                   setEquipmentToDelete(editingEquipment);
                   setEditingEquipment(null);
                 }}
-                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 border border-rose-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                title="Hapus alat rental ini dari database master"
+                className="btn-destructive inline-flex items-center gap-1.5 text-[12px]"
               >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                <span>Hapus Alat Ini</span>
+                <Trash2 className="w-3.5 h-3.5" />
+                Hapus Alat
               </button>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingEquipment(null)}
-                  className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-medium transition-colors"
+                  className="btn-ghost text-[12px]"
                 >
                   Batal
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Simpan Perubahan Alat</span>
+                <button type="submit" className="btn-primary inline-flex items-center gap-1.5 text-[12px]">
+                  <Check className="w-3.5 h-3.5" />
+                  Simpan Perubahan
                 </button>
               </div>
             </div>
@@ -740,112 +740,119 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* MODAL: TAMBAH ALAT BARU */}
-      {/* ======================================================== */}
+      {/* ================================================================ */}
+      {/* MODAL: TAMBAH ALAT BARU                                          */}
+      {/* ================================================================ */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto animate-backdrop-enter"
+          style={{ background: 'rgba(10,11,14,0.72)', backdropFilter: 'blur(4px)' }}
+        >
           <form
             onSubmit={handleAddSubmit}
-            className="bg-white rounded-xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8"
+            className="animate-dialog-enter max-w-lg w-full my-8 rounded-xl overflow-hidden border border-white/[0.06]"
+            style={{ background: '#1a1d24' }}
           >
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-2">
-                <span className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
-                  <Plus className="w-4 h-4" />
+            {/* Header */}
+            <div
+              className="px-5 py-4 flex items-center justify-between border-b"
+              style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="p-1.5 bg-indigo-600/20 rounded-lg">
+                  <Plus className="w-4 h-4 text-indigo-400" />
                 </span>
-                <h3 className="font-bold text-sm text-slate-900">
-                  Tambah Master Alat Rental Baru
-                </h3>
+                <div>
+                  <h3 className="text-[13px] font-bold text-white">Tambah Master Alat Rental Baru</h3>
+                  <p className="text-[11px] mt-0.5" style={{ color: '#6b7280' }}>
+                    Akan langsung tersedia di seluruh role dan pembuatan booking
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-[#6b7280] hover:text-white transition-colors p-1"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-3.5 text-xs max-h-[75vh] overflow-y-auto">
+            {/* Body */}
+            <div className="px-5 py-4 space-y-3.5 max-h-[70vh] overflow-y-auto">
+              <p className="section-label">Identitas Alat</p>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Kode Alat (SKU):
-                  </label>
+                  <label className="field-label mb-1.5">Kode Alat (SKU) *</label>
                   <input
                     type="text"
                     required
                     placeholder="cth: CAM-A7M4"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded text-xs font-mono"
+                    className="field-input w-full font-mono text-[12px]"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Brand / Merek:</label>
+                  <label className="field-label mb-1.5">Brand / Merek</label>
                   <input
                     type="text"
                     placeholder="cth: Sony, Shure"
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded text-xs"
+                    className="field-input w-full text-[12px]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Nama Lengkap Alat:</label>
+                <label className="field-label mb-1.5">Nama Lengkap Alat *</label>
                 <input
                   type="text"
                   required
                   placeholder="cth: Sony Alpha 7 IV Kit Lensa 24-70mm"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded text-xs"
+                  className="field-input w-full text-[12px]"
                 />
               </div>
 
-              {/* Deskripsi Barang */}
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Deskripsi & Spesifikasi Alat:
-                </label>
+                <label className="field-label mb-1.5">Deskripsi &amp; Spesifikasi</label>
                 <textarea
                   rows={2}
                   placeholder="Spesifikasi teknis, kelengkapan aksesoris, atau catatan khusus..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded text-xs"
+                  className="field-input w-full text-[12px] leading-relaxed"
                 />
               </div>
 
+              <p className="section-label mt-2">Kategori &amp; Kondisi</p>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Kategori:</label>
+                  <label className="field-label mb-1.5">Kategori</label>
                   <select
                     value={formData.category}
-                    onChange={(e) =>
-                      setFormData({ ...formData, category: e.target.value as any })
-                    }
-                    className="w-full p-2 border border-slate-300 rounded text-xs bg-white"
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                    className="field-input w-full text-[12px]"
                   >
-                    <option value="Kamera & Lensa">Kamera & Lensa</option>
-                    <option value="Audio & Sound">Audio & Sound</option>
-                    <option value="Lighting & Effect">Lighting & Effect</option>
-                    <option value="Visual & LED">Visual & LED</option>
-                    <option value="Rigging & Truss">Rigging & Truss</option>
-                    <option value="Power & Kabel">Power & Kabel</option>
+                    <option value="Kamera & Lensa">Kamera &amp; Lensa</option>
+                    <option value="Audio & Sound">Audio &amp; Sound</option>
+                    <option value="Lighting & Effect">Lighting &amp; Effect</option>
+                    <option value="Visual & LED">Visual &amp; LED</option>
+                    <option value="Rigging & Truss">Rigging &amp; Truss</option>
+                    <option value="Power & Kabel">Power &amp; Kabel</option>
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Kondisi:</label>
+                  <label className="field-label mb-1.5">Kondisi Awal</label>
                   <select
                     value={formData.condition}
-                    onChange={(e) =>
-                      setFormData({ ...formData, condition: e.target.value as any })
-                    }
-                    className="w-full p-2 border border-slate-300 rounded text-xs bg-white"
+                    onChange={(e) => setFormData({ ...formData, condition: e.target.value as any })}
+                    className="field-input w-full text-[12px]"
                   >
                     <option value="Sangat Baik">Sangat Baik</option>
                     <option value="Baik">Baik</option>
@@ -854,11 +861,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 </div>
               </div>
 
+              <p className="section-label mt-2">Stok &amp; Tarif</p>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Total Stok Fisik:
-                  </label>
+                  <label className="field-label mb-1.5">Total Stok Fisik</label>
                   <input
                     type="number"
                     min={1}
@@ -867,13 +874,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     onChange={(e) =>
                       setFormData({ ...formData, totalStock: parseInt(e.target.value, 10) || 1 })
                     }
-                    className="w-full p-2 border border-slate-300 rounded text-xs font-mono"
+                    className="field-input w-full font-mono text-[12px]"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Tarif Sewa / Hari (Rp):
-                  </label>
+                  <label className="field-label mb-1.5">Tarif Sewa / Hari (Rp)</label>
                   <input
                     type="number"
                     min={10000}
@@ -883,37 +888,73 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     onChange={(e) =>
                       setFormData({ ...formData, dailyRate: parseInt(e.target.value, 10) || 10000 })
                     }
-                    className="w-full p-2 border border-slate-300 rounded text-xs font-mono"
+                    className="field-input w-full font-mono text-[12px]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Lokasi Rak di Gudang:
+                <label className="field-label mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3 text-indigo-400" />
+                  Lokasi Rak di Gudang
                 </label>
                 <input
                   type="text"
                   placeholder="cth: Rak A-04 (Dry Cabinet)"
                   value={formData.locationRack}
                   onChange={(e) => setFormData({ ...formData, locationRack: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded text-xs"
+                  className="field-input w-full font-mono text-[12px]"
                 />
               </div>
+
+              {/* Serial numbers preview */}
+              {formData.code && formData.totalStock > 0 && (
+                <div
+                  className="rounded-lg p-3 border"
+                  style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}
+                >
+                  <p className="field-label mb-2">
+                    <Layers className="w-3 h-3 text-indigo-400 inline mr-1" />
+                    Serial Numbers (Auto-generate)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Array.from({ length: Math.min(formData.totalStock, 6) }, (_, i) => (
+                      <span
+                        key={i}
+                        className="font-mono text-[10px] px-2 py-0.5 rounded"
+                        style={{
+                          background: 'rgba(79,70,229,0.15)',
+                          color: '#818cf8',
+                          border: '1px solid rgba(79,70,229,0.25)',
+                        }}
+                      >
+                        SN-{formData.code}-{String(i + 1).padStart(2, '0')}
+                      </span>
+                    ))}
+                    {formData.totalStock > 6 && (
+                      <span className="text-[10px]" style={{ color: '#6b7280' }}>
+                        +{formData.totalStock - 6} lagi
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+            {/* Footer */}
+            <div
+              className="px-5 py-3.5 flex justify-end gap-2 border-t"
+              style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}
+            >
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded text-xs font-medium"
+                className="btn-ghost text-[12px]"
               >
                 Batal
               </button>
-              <button
-                type="submit"
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shadow-sm"
-              >
+              <button type="submit" className="btn-primary inline-flex items-center gap-1.5 text-[12px]">
+                <Check className="w-3.5 h-3.5" />
                 Simpan ke Database Master
               </button>
             </div>
@@ -921,56 +962,54 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* MODAL: UBAH KONDISI ALAT (WEWENANG STAF GUDANG) */}
-      {/* ======================================================== */}
+      {/* ================================================================ */}
+      {/* MODAL: UBAH KONDISI ALAT (WEWENANG STAF GUDANG)                  */}
+      {/* ================================================================ */}
       {editingConditionEq && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wrench className="w-5 h-5 text-indigo-400" />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-backdrop-enter"
+          style={{ background: 'rgba(10,11,14,0.72)', backdropFilter: 'blur(4px)' }}
+        >
+          <div className="panel-elevated animate-dialog-enter max-w-sm w-full rounded-xl overflow-hidden">
+            {/* Header */}
+            <div className="px-5 py-4 flex items-center justify-between border-b border-[rgba(17,19,24,0.08)]">
+              <div className="flex items-center gap-2.5">
+                <span className="p-1.5 bg-amber-50 rounded-lg">
+                  <Wrench className="w-4 h-4 text-amber-600" />
+                </span>
                 <div>
-                  <h3 className="font-bold text-sm text-white">
-                    Update Kondisi Fisik Alat
-                  </h3>
-                  <p className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                  <h3 className="text-[13px] font-bold text-[#111318]">Update Kondisi Fisik</h3>
+                  <p className="text-[11px] text-[#6b7280] truncate max-w-[180px]">
                     {editingConditionEq.name}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setEditingConditionEq(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-[#9ca3af] hover:text-[#111318] transition-colors p-1"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs">
+            {/* Body */}
+            <div className="px-5 py-4 space-y-4">
               <div>
-                <label className="font-bold text-slate-800 block mb-1">
-                  Status Kondisi Fisik Saat Ini:
-                </label>
+                <label className="field-label mb-2">Status Kondisi Fisik</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['Sangat Baik', 'Baik', 'Perlu Servis'] as const).map((st) => (
                     <button
                       key={st}
                       type="button"
-                      onClick={() =>
-                        setEditingConditionEq({
-                          ...editingConditionEq,
-                          condition: st,
-                        })
-                      }
-                      className={`py-2 px-2 text-center rounded-lg font-bold border transition-all ${
+                      onClick={() => setEditingConditionEq({ ...editingConditionEq, condition: st })}
+                      className={`py-2 text-center rounded-lg text-[11px] font-semibold border transition-all ${
                         editingConditionEq.condition === st
                           ? st === 'Sangat Baik'
                             ? 'bg-emerald-600 text-white border-emerald-600'
                             : st === 'Baik'
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-amber-600 text-white border-amber-600'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                            ? 'bg-amber-500 text-white border-amber-500'
+                            : 'bg-[#be123c] text-white border-[#be123c]'
+                          : 'bg-[#f7f6f4] text-[#6b7280] border-[rgba(17,19,24,0.1)] hover:border-[rgba(17,19,24,0.2)]'
                       }`}
                     >
                       {st}
@@ -980,33 +1019,35 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </div>
 
               <div>
-                <label className="font-bold text-slate-800 block mb-1">
-                  Lokasi Rak Gudang:
+                <label className="field-label mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3 text-indigo-500" />
+                  Lokasi Rak Gudang
                 </label>
                 <input
                   type="text"
                   value={editingConditionEq.locationRack}
                   onChange={(e) =>
-                    setEditingConditionEq({
-                      ...editingConditionEq,
-                      locationRack: e.target.value,
-                    })
+                    setEditingConditionEq({ ...editingConditionEq, locationRack: e.target.value })
                   }
-                  className="w-full p-2 border border-slate-300 rounded text-xs font-mono"
                   placeholder="cth: Rak A-01 (Kamera)"
+                  className="field-input w-full font-mono text-[12px]"
                 />
               </div>
 
-              <div className="p-2.5 bg-slate-50 rounded border border-slate-200 text-[11px] text-slate-500">
-                Pembaruan kondisi ini akan langsung tersinkronisasi ke status inventaris gudang dan jadwal sewa.
+              <div
+                className="p-2.5 rounded-lg text-[11px] leading-relaxed"
+                style={{ background: '#f7f6f4', color: '#6b7280', border: '1px solid rgba(17,19,24,0.07)' }}
+              >
+                Pembaruan kondisi akan tersinkronisasi langsung ke status inventaris dan jadwal sewa.
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+            {/* Footer */}
+            <div className="px-5 py-3.5 flex justify-end gap-2 border-t border-[rgba(17,19,24,0.07)] bg-[#faf9f7]">
               <button
                 type="button"
                 onClick={() => setEditingConditionEq(null)}
-                className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-semibold"
+                className="btn-ghost text-[12px]"
               >
                 Batal
               </button>
@@ -1021,9 +1062,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     );
                   }
                   setEditingConditionEq(null);
-                  showNotification(`Status kondisi alat "${editingConditionEq.name}" berhasil diubah menjadi "${editingConditionEq.condition}".`);
+                  showNotification(
+                    `Status kondisi alat "${editingConditionEq.name}" berhasil diubah menjadi "${editingConditionEq.condition}".`
+                  );
                 }}
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shadow-sm"
+                className="btn-primary text-[12px]"
               >
                 Simpan Status
               </button>
@@ -1032,64 +1075,85 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* MODAL: KONFIRMASI HAPUS ALAT (DELETE EQUIPMENT) */}
-      {/* ======================================================== */}
+      {/* ================================================================ */}
+      {/* MODAL: KONFIRMASI HAPUS ALAT                                      */}
+      {/* ================================================================ */}
       {equipmentToDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-rose-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-4 bg-rose-50 border-b border-rose-100 flex items-center gap-3">
-              <div className="p-2.5 bg-rose-100 text-rose-600 rounded-xl">
-                <Trash2 className="w-5 h-5 text-rose-600" />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-backdrop-enter"
+          style={{ background: 'rgba(10,11,14,0.72)', backdropFilter: 'blur(4px)' }}
+        >
+          <div
+            className="animate-dialog-enter max-w-md w-full rounded-xl overflow-hidden border border-white/[0.06]"
+            style={{ background: '#1a1d24' }}
+          >
+            {/* Header */}
+            <div
+              className="px-5 py-4 flex items-center gap-3 border-b"
+              style={{ borderColor: 'rgba(190,18,60,0.25)', background: 'rgba(190,18,60,0.08)' }}
+            >
+              <div className="p-2 rounded-lg" style={{ background: 'rgba(190,18,60,0.15)' }}>
+                <Trash2 className="w-4 h-4 text-[#be123c]" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-slate-900">
-                  Konfirmasi Hapus Alat Rental
-                </h3>
-                <p className="text-[11px] text-rose-600 font-medium">
+                <h3 className="text-[13px] font-bold text-white">Konfirmasi Hapus Alat Rental</h3>
+                <p className="text-[11px] mt-0.5" style={{ color: '#f87171' }}>
                   Penghapusan berlaku permanen di seluruh role
                 </p>
               </div>
             </div>
 
-            <div className="p-5 space-y-4 text-xs">
-              <p className="text-slate-600 leading-relaxed">
-                Apakah Anda yakin ingin menghapus alat rental berikut dari database master inventaris?
+            {/* Body */}
+            <div className="px-5 py-4 space-y-3.5">
+              <p className="text-[12px] leading-relaxed" style={{ color: '#9ca3af' }}>
+                Apakah Anda yakin ingin menghapus alat berikut dari database master inventaris?
               </p>
 
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5">
-                <div className="font-bold text-sm text-slate-900">
-                  {equipmentToDelete.name}
+              <div
+                className="p-3.5 rounded-lg space-y-1.5"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <div className="text-[13px] font-semibold text-white">{equipmentToDelete.name}</div>
+                <div className="font-mono text-[11px]" style={{ color: '#6b7280' }}>
+                  {equipmentToDelete.code} · {equipmentToDelete.category}
                 </div>
-                <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
-                  <span>Kode: {equipmentToDelete.code}</span>
-                  <span>•</span>
-                  <span>Kategori: {equipmentToDelete.category}</span>
-                </div>
-                <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-700">
+                <div className="flex items-center gap-3 pt-1 text-[11px]" style={{ color: '#9ca3af' }}>
                   <span>
-                    Tarif: <strong className="text-slate-900">{formatRupiah(equipmentToDelete.dailyRate)}</strong>/hari
+                    Tarif:{' '}
+                    <strong className="text-white font-mono">
+                      {formatRupiah(equipmentToDelete.dailyRate)}
+                    </strong>
+                    /hari
                   </span>
-                  <span>•</span>
+                  <span>·</span>
                   <span>
-                    Stok Fisik: <strong className="text-slate-900">{equipmentToDelete.totalStock} Unit</strong>
+                    Stok:{' '}
+                    <strong className="text-white font-mono">{equipmentToDelete.totalStock} unit</strong>
                   </span>
                 </div>
               </div>
 
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div
+                className="p-3 rounded-lg text-[11px] leading-relaxed flex items-start gap-2"
+                style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.2)', color: '#fbbf24' }}
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <span>
-                  Alat yang dihapus akan otomatis hilang dari katalog master di seluruh role (<strong>Admin</strong>, <strong>Owner</strong>, dan <strong>Staf Gudang</strong>) serta tidak dapat dipilih lagi pada pembuatan jadwal booking baru.
+                  Alat yang dihapus akan hilang dari katalog di semua role (<strong>Admin</strong>,{' '}
+                  <strong>Owner</strong>, <strong>Staf Gudang</strong>) dan tidak dapat dipilih di booking baru.
                 </span>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+            {/* Footer */}
+            <div
+              className="px-5 py-3.5 flex items-center justify-end gap-2 border-t"
+              style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}
+            >
               <button
                 type="button"
                 onClick={() => setEquipmentToDelete(null)}
-                className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
+                className="btn-ghost text-[12px]"
               >
                 Batal
               </button>
@@ -1101,12 +1165,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   }
                   const deletedName = equipmentToDelete.name;
                   setEquipmentToDelete(null);
-                  showNotification(`Alat "${deletedName}" berhasil dihapus dari master inventaris seluruh role.`);
+                  showNotification(
+                    `Alat "${deletedName}" berhasil dihapus dari master inventaris seluruh role.`
+                  );
                 }}
-                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5"
+                className="btn-destructive inline-flex items-center gap-1.5 text-[12px]"
               >
-                <Trash2 className="w-4 h-4" />
-                <span>Ya, Hapus Alat</span>
+                <Trash2 className="w-3.5 h-3.5" />
+                Ya, Hapus Alat
               </button>
             </div>
           </div>

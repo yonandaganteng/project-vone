@@ -158,56 +158,116 @@ export const CalendarConflictView: React.FC<CalendarConflictViewProps> = ({
   // Categories list for filter tabs
   const categories = ['Semua', 'Kamera & Lensa', 'Audio & Sound', 'Lighting & Effect', 'Visual & LED'];
 
+  // Today's date string for highlighting
+  const todayString = new Date().toISOString().split('T')[0];
+
   return (
-    <div className="space-y-4">
-      {/* Top Banner explaining the Anti Double-Booking System */}
-      <div className="bg-indigo-900 text-white p-4 rounded-xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-indigo-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-800 flex items-center justify-center shrink-0">
-            <CalendarIcon className="w-5 h-5 text-indigo-300" />
-          </div>
-          <div>
-            <div className="text-sm font-bold flex items-center gap-2">
-              <span>Kalender Ketersediaan & Pencegahan Double-Booking</span>
-              <span className="text-[10px] font-mono bg-red-500/90 text-white px-2 py-0.5 rounded font-bold">
-                CORE SYSTEM
-              </span>
-            </div>
-            <p className="text-xs text-indigo-200 mt-0.5">
-              Event bertanda <strong className="text-red-300">Merah</strong> memicu stok minus (bentrok) karena berebut unit alat di tanggal yang sama.
-              Event bertanda <strong className="text-indigo-200">Biru</strong> memiliki alokasi unit yang aman.
-            </p>
-          </div>
+    <div className="animate-page-enter relative">
+      {/* Ambient Background: Calendar Timeline */}
+      <div className="ambient-calendar-timeline" aria-hidden="true">
+        <div className="ambient-calendar-timeline-track">
+          {Array.from({ length: 32 }).map((_, i) => (
+            <div
+              key={i}
+              className="ambient-calendar-timeline-marker"
+              style={{ left: `${(i / 31) * 100}%` }}
+            />
+          ))}
         </div>
-        <button
-          onClick={onOpenNewBooking}
-          className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Buat Event & Booking</span>
-        </button>
       </div>
 
-      {/* Main Layout: 70% Left Calendar + 30% Right Calculator (Blueprint Point 3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* PANEL KIRI: 70% Area Kalender (Lg: col-span-8 atau col-span-8.5) */}
-        <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-          {/* Calendar Header Controls */}
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
-                {monthNames[currentMonth]} {currentYear}
-              </h2>
-              <span className="text-xs text-slate-500 hidden sm:inline">
-                ({bookings.length} Event Terdaftar)
-              </span>
-            </div>
+      {/* All content wrapper above ambient */}
+      <div className="relative z-10 space-y-5">
 
-            <div className="flex items-center gap-2">
-              <div className="flex items-center border border-slate-200 rounded-lg p-0.5 bg-slate-50">
+        {/* Page Header Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: '#1a1d24', border: '1px solid rgba(79,70,229,0.3)' }}
+            >
+              <CalendarIcon className="w-4 h-4" style={{ color: '#6366f1' }} />
+            </div>
+            <div>
+              <h1 className="text-[17px] font-bold tracking-tight" style={{ color: '#111318' }}>
+                Kalender Ketersediaan
+              </h1>
+              <p className="text-[12px] mt-0.5" style={{ color: '#6b7280' }}>
+                Pencegahan double-booking · Real-time stock check
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onOpenNewBooking}
+            className="btn-primary btn-magnetic flex items-center gap-2 self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Buat Event &amp; Booking</span>
+          </button>
+        </div>
+
+        {/* Legend strip */}
+        <div
+          className="flex flex-wrap items-center gap-5 px-4 py-2.5 rounded-lg"
+          style={{
+            background: '#fefdfb',
+            border: '1px solid rgba(17,19,24,0.08)',
+          }}
+        >
+          <span className="section-label">Indikator</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#4f46e5' }} />
+            <span className="text-[11px]" style={{ color: '#374151' }}>Event Aman</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#be123c' }} />
+            <span className="text-[11px] font-semibold" style={{ color: '#be123c' }}>Bentrok Stok</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#d97706' }} />
+            <span className="text-[11px]" style={{ color: '#374151' }}>Sedang Diluar Gudang</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#059669' }} />
+            <span className="text-[11px]" style={{ color: '#374151' }}>Selesai</span>
+          </div>
+        </div>
+
+        {/* Main Two-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+          {/* ── LEFT: Calendar (60% → col-span-7) ── */}
+          <div
+            className="lg:col-span-7 panel overflow-hidden flex flex-col"
+          >
+            {/* Calendar Header */}
+            <div
+              className="px-5 py-4 flex items-center justify-between"
+              style={{ borderBottom: '1px solid rgba(17,19,24,0.08)' }}
+            >
+              <div className="flex items-baseline gap-3">
+                <h2
+                  className="text-[22px] font-bold tracking-tight"
+                  style={{ color: '#111318' }}
+                >
+                  {monthNames[currentMonth]}
+                </h2>
+                <span className="font-mono text-[15px]" style={{ color: '#9ca3af' }}>
+                  {currentYear}
+                </span>
+                <span
+                  className="text-[11px] hidden sm:inline"
+                  style={{ color: '#9ca3af' }}
+                >
+                  · {bookings.length} event
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1">
                 <button
                   onClick={prevMonth}
-                  className="p-1.5 hover:bg-white rounded text-slate-600 transition-colors"
+                  className="btn-ghost p-1.5"
                   title="Bulan sebelumnya"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -217,378 +277,541 @@ export const CalendarConflictView: React.FC<CalendarConflictViewProps> = ({
                     setCurrentYear(2026);
                     setCurrentMonth(9);
                   }}
-                  className="px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-white rounded transition-colors"
+                  className="btn-ghost px-2.5 py-1 text-[11px]"
                 >
-                  Bulan Ini (Okt 2026)
+                  Okt 2026
                 </button>
                 <button
                   onClick={nextMonth}
-                  className="p-1.5 hover:bg-white rounded text-slate-600 transition-colors"
+                  className="btn-ghost p-1.5"
                   title="Bulan berikutnya"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* Calendar Legend */}
-          <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-4 text-xs text-slate-600">
-            <span className="font-semibold text-slate-700">Indikator:</span>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-indigo-600 inline-block" />
-              <span>Event Aman (Alokasi Valid)</span>
+            {/* Day Headers */}
+            <div
+              className="grid grid-cols-7 text-center py-2"
+              style={{ borderBottom: '1px solid rgba(17,19,24,0.06)', background: '#f7f6f4' }}
+            >
+              {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((d) => (
+                <span key={d} className="section-label text-center py-0.5">{d}</span>
+              ))}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-red-500 inline-block" />
-              <span className="font-semibold text-red-700">⚠️ Bentrok Stok / Double-Booking</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-amber-500 inline-block" />
-              <span>Sedang Diluar Gudang</span>
-            </div>
-          </div>
 
-          {/* Calendar Grid: Day Headers */}
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-100 text-center text-xs font-semibold text-slate-600 uppercase py-2">
-            <span>Minggu</span>
-            <span>Senin</span>
-            <span>Selasa</span>
-            <span>Rabu</span>
-            <span>Kamis</span>
-            <span>Jumat</span>
-            <span>Sabtu</span>
-          </div>
+            {/* Calendar Grid Cells */}
+            <div
+              className="grid grid-cols-7"
+              style={{ background: 'rgba(17,19,24,0.04)', gap: '1px' }}
+            >
+              {calendarDays.map((day, idx) => {
+                const dayBookings = getBookingsForDate(day.dateString);
+                const hasConflictToday = dayBookings.some((b) => conflictMap.get(b.id)?.hasConflict);
+                const isToday = day.dateString === todayString;
 
-          {/* Calendar Grid: Cells */}
-          <div className="grid grid-cols-7 auto-rows-fr bg-slate-200 gap-px">
-            {calendarDays.map((day, idx) => {
-              const dayBookings = getBookingsForDate(day.dateString);
-              const hasConflictToday = dayBookings.some((b) => conflictMap.get(b.id)?.hasConflict);
-
-              return (
-                <div
-                  key={idx}
-                  className={`min-h-[105px] sm:min-h-[115px] p-1.5 flex flex-col justify-between transition-colors ${
-                    !day.isCurrentMonth
-                      ? 'bg-slate-50 text-slate-400'
-                      : hasConflictToday
-                      ? 'bg-red-50/70 text-slate-900 ring-1 ring-inset ring-red-300'
-                      : 'bg-white text-slate-900'
-                  }`}
-                >
-                  {/* Date Number Header */}
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span
-                      className={`font-mono ${
-                        hasConflictToday
-                          ? 'font-bold text-red-700'
-                          : day.isCurrentMonth
-                          ? 'text-slate-800'
-                          : 'text-slate-400'
-                      }`}
-                    >
-                      {day.dateNumber}
-                    </span>
-                    {hasConflictToday && (
+                return (
+                  <div
+                    key={idx}
+                    className={`min-h-[80px] sm:min-h-[90px] p-1.5 flex flex-col transition-colors ${
+                      hasConflictToday && day.isCurrentMonth ? 'conflict-marker' : ''
+                    }`}
+                    style={{
+                      background: !day.isCurrentMonth
+                        ? '#f7f6f4'
+                        : hasConflictToday
+                        ? 'rgba(190,18,60,0.04)'
+                        : '#fefdfb',
+                      borderBottom: isToday ? '2px solid #4f46e5' : undefined,
+                    }}
+                  >
+                    {/* Date Number */}
+                    <div className="flex items-center justify-between mb-1">
                       <span
-                        className="text-[10px] text-red-600 font-bold flex items-center"
-                        title="Bentrok Stok Terdeteksi pada hari ini!"
+                        className={`font-mono text-[12px] font-medium leading-none ${
+                          hasConflictToday && day.isCurrentMonth
+                            ? 'font-bold'
+                            : ''
+                        }`}
+                        style={{
+                          color: !day.isCurrentMonth
+                            ? '#d1d5db'
+                            : hasConflictToday
+                            ? '#be123c'
+                            : isToday
+                            ? '#4f46e5'
+                            : '#374151',
+                        }}
                       >
-                        <AlertTriangle className="w-3 h-3" />
+                        {day.dateNumber}
                       </span>
-                    )}
-                  </div>
+                      {hasConflictToday && day.isCurrentMonth && (
+                        <span title="Bentrok stok terdeteksi" className="inline-flex">
+                          <AlertTriangle
+                            className="w-3 h-3 shrink-0"
+                            style={{ color: '#be123c' }}
+                          />
+                        </span>
+                      )}
+                    </div>
 
-                  {/* Event Bars / Pills inside this Date */}
-                  <div className="space-y-1 mt-1 flex-1 overflow-y-auto max-h-[85px]">
-                    {dayBookings.map((b) => {
-                      const conflictInfo = conflictMap.get(b.id);
-                      const isConflict = conflictInfo?.hasConflict;
+                    {/* Event Chips */}
+                    <div className="flex flex-col gap-0.5 overflow-hidden">
+                      {dayBookings.slice(0, 3).map((b) => {
+                        const conflictInfo = conflictMap.get(b.id);
+                        const isConflict = conflictInfo?.hasConflict;
+                        const isCompleted = b.status === 'Selesai';
 
-                      return (
-                        <button
-                          key={b.id}
-                          onClick={() => setSelectedEvent(b)}
-                          className={`w-full text-left p-1 rounded text-[11px] font-medium leading-tight transition-all flex items-center gap-1 shadow-xs truncate ${
-                            isConflict
-                              ? 'bg-red-600 hover:bg-red-700 text-white font-bold ring-1 ring-red-400'
-                              : b.logisticsStatus === 'Keluar Gudang'
-                              ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                          }`}
-                          title={`${b.eventName} (${formatDateIndo(b.startDate)} - ${formatDateIndo(b.endDate)})`}
+                        let chipBg = '#4f46e5';
+                        let chipText = '#fff';
+                        if (isConflict) { chipBg = '#be123c'; chipText = '#fff'; }
+                        else if (b.logisticsStatus === 'Keluar Gudang') { chipBg = '#d97706'; chipText = '#fff'; }
+                        else if (isCompleted) { chipBg = '#059669'; chipText = '#fff'; }
+
+                        return (
+                          <button
+                            key={b.id}
+                            onClick={() => setSelectedEvent(b)}
+                            className="w-full text-left truncate transition-opacity hover:opacity-80 flex items-center gap-1"
+                            style={{
+                              background: chipBg,
+                              color: chipText,
+                              fontSize: '11px',
+                              lineHeight: '22px',
+                              height: '22px',
+                              borderRadius: '3px',
+                              paddingLeft: '5px',
+                              paddingRight: '5px',
+                              fontWeight: 500,
+                            }}
+                            title={`${b.eventName} (${formatDateIndo(b.startDate)} - ${formatDateIndo(b.endDate)})`}
+                          >
+                            {isConflict && (
+                              <AlertTriangle className="w-2.5 h-2.5 shrink-0" style={{ color: '#fca5a5' }} />
+                            )}
+                            <span className="truncate">{b.eventName}</span>
+                          </button>
+                        );
+                      })}
+                      {dayBookings.length > 3 && (
+                        <span
+                          className="text-[10px] font-mono pl-1"
+                          style={{ color: '#9ca3af' }}
                         >
-                          {isConflict ? (
-                            <AlertTriangle className="w-3 h-3 shrink-0 text-amber-200" />
-                          ) : (
-                            <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
-                          )}
-                          <span className="truncate">{b.eventName}</span>
-                        </button>
+                          +{dayBookings.length - 3} lagi
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── RIGHT: Availability Calculator (40% → col-span-5) ── */}
+          <div className="lg:col-span-5 flex flex-col gap-4">
+
+            {/* Availability Calculator Panel */}
+            <div className="panel p-4 flex flex-col gap-4">
+              {/* Panel Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3
+                    className="text-[13px] font-bold tracking-tight flex items-center gap-2"
+                    style={{ color: '#111318' }}
+                  >
+                    Cek Ketersediaan Alat
+                    <span
+                      className="w-1.5 h-1.5 rounded-full inline-block"
+                      style={{ background: '#059669' }}
+                    />
+                  </h3>
+                  <p className="text-[11px] mt-0.5" style={{ color: '#9ca3af' }}>
+                    Hitung sisa stok sebelum buat booking
+                  </p>
+                </div>
+                <span
+                  className="font-mono text-[10px] px-2 py-0.5 rounded"
+                  style={{
+                    background: 'rgba(5,150,105,0.08)',
+                    color: '#059669',
+                    border: '1px solid rgba(5,150,105,0.2)',
+                  }}
+                >
+                  REAL-TIME
+                </span>
+              </div>
+
+              {/* Date Range Inputs */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="field-label block mb-1">Tgl Mulai</label>
+                  <input
+                    type="date"
+                    value={calcStartDate}
+                    onChange={(e) => setCalcStartDate(e.target.value)}
+                    className="field-input w-full font-mono text-[12px]"
+                  />
+                </div>
+                <div>
+                  <label className="field-label block mb-1">Tgl Selesai</label>
+                  <input
+                    type="date"
+                    value={calcEndDate}
+                    onChange={(e) => setCalcEndDate(e.target.value)}
+                    className="field-input w-full font-mono text-[12px]"
+                  />
+                </div>
+              </div>
+
+              {/* Search Input */}
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+                  style={{ color: '#9ca3af' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Cari nama alat..."
+                  value={calcSearchQuery}
+                  onChange={(e) => setCalcSearchQuery(e.target.value)}
+                  className="field-input w-full pl-8 text-[12px]"
+                />
+              </div>
+
+              {/* Category Tabs */}
+              <div
+                className="flex gap-0 overflow-x-auto"
+                style={{ borderBottom: '1px solid rgba(17,19,24,0.08)' }}
+              >
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className="px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-colors relative"
+                    style={{
+                      color: selectedCategory === cat ? '#4f46e5' : '#6b7280',
+                      background: 'transparent',
+                      borderBottom: selectedCategory === cat ? '2px solid #4f46e5' : '2px solid transparent',
+                      marginBottom: '-1px',
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* Availability Table */}
+              {availabilityResults.length === 0 ? (
+                <div
+                  className="text-center py-10"
+                  style={{ color: '#9ca3af' }}
+                >
+                  <Layers className="w-7 h-7 mx-auto mb-2 opacity-30" />
+                  <p className="text-[12px]">Tidak ada alat ditemukan.</p>
+                </div>
+              ) : (
+                <div className="overflow-y-auto max-h-[380px]">
+                  <table className="data-table w-full">
+                    <thead>
+                      <tr>
+                        <th className="text-left">Alat</th>
+                        <th className="text-right">Stok</th>
+                        <th className="text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {availabilityResults.map(
+                        ({ equipment, availableStock, maxAllocated, conflictingEvents, isDepleted }) => {
+                          const isPartial = !isDepleted && availableStock <= 2;
+                          return (
+                            <tr key={equipment.id} className="table-row-hover">
+                              <td>
+                                <div
+                                  className="text-[12px] font-medium truncate max-w-[140px]"
+                                  style={{ color: '#111318' }}
+                                >
+                                  {equipment.name}
+                                </div>
+                                <div
+                                  className="font-mono text-[11px]"
+                                  style={{ color: '#9ca3af' }}
+                                >
+                                  {formatRupiah(equipment.dailyRate)}/hr
+                                </div>
+                              </td>
+                              <td className="text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {/* Status dot */}
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0 inline-block"
+                                    style={{
+                                      background: isDepleted
+                                        ? '#be123c'
+                                        : isPartial
+                                        ? '#d97706'
+                                        : '#059669',
+                                    }}
+                                  />
+                                  <span
+                                    className="font-mono text-[11px]"
+                                    style={{
+                                      color: isDepleted
+                                        ? '#be123c'
+                                        : isPartial
+                                        ? '#d97706'
+                                        : '#059669',
+                                    }}
+                                  >
+                                    {availableStock}/{equipment.totalStock}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="text-right">
+                                <button
+                                  disabled={isDepleted}
+                                  onClick={() => {
+                                    if (onOpenNewBookingWithItem) {
+                                      onOpenNewBookingWithItem(equipment.id, calcStartDate, calcEndDate);
+                                    } else {
+                                      onOpenNewBooking();
+                                    }
+                                  }}
+                                  className="btn-ghost text-[11px] px-2 py-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                  {isDepleted ? 'Habis' : 'Booking'}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        }
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Conflict Events List */}
+            {(() => {
+              const conflictBookings = bookings.filter((b) => conflictMap.get(b.id)?.hasConflict);
+              if (conflictBookings.length === 0) return null;
+              return (
+                <div className="panel p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="section-label">Bentrok Terdeteksi</span>
+                    <span
+                      className="font-mono text-[10px] px-1.5 py-0.5 rounded"
+                      style={{
+                        background: 'rgba(190,18,60,0.08)',
+                        color: '#be123c',
+                        border: '1px solid rgba(190,18,60,0.15)',
+                      }}
+                    >
+                      {conflictBookings.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {conflictBookings.map((b) => {
+                      const details = conflictMap.get(b.id)?.details ?? [];
+                      return (
+                        <div
+                          key={b.id}
+                          className="flex items-start gap-3 py-2.5 px-3 rounded-md transition-colors hover:bg-red-50/40"
+                          style={{
+                            borderLeft: '2px solid #be123c',
+                            background: 'rgba(190,18,60,0.03)',
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div
+                              className="text-[12px] font-semibold truncate"
+                              style={{ color: '#111318' }}
+                            >
+                              {b.eventName}
+                            </div>
+                            <div
+                              className="font-mono text-[11px] mt-0.5"
+                              style={{ color: '#9ca3af' }}
+                            >
+                              {formatDateIndo(b.startDate)} – {formatDateIndo(b.endDate)}
+                            </div>
+                            {details[0] && (
+                              <div
+                                className="text-[11px] mt-1 leading-snug"
+                                style={{ color: '#be123c' }}
+                              >
+                                {details[0]}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setSelectedEvent(b)}
+                            className="text-[11px] font-medium shrink-0 transition-colors hover:underline"
+                            style={{ color: '#4f46e5' }}
+                          >
+                            Lihat
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
                 </div>
               );
-            })}
-          </div>
-        </div>
-
-        {/* PANEL KANAN: 30% Kalkulator Ketersediaan Alat (Blueprint Point 3) */}
-        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col space-y-4">
-          <div>
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-sm text-slate-900 tracking-tight flex items-center gap-2">
-                <span>Cek Ketersediaan Alat</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              </h3>
-              <span className="text-[11px] text-slate-500 font-medium">Real-Time</span>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Hitung sisa stok yang aman pada rentang tanggal sebelum membuat booking
-            </p>
-          </div>
-
-          {/* Date Range Selector */}
-          <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-            <div>
-              <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
-                Tgl Mulai
-              </label>
-              <input
-                type="date"
-                value={calcStartDate}
-                onChange={(e) => setCalcStartDate(e.target.value)}
-                className="w-full text-xs font-mono bg-white border border-slate-300 rounded px-2 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
-                Tgl Selesai
-              </label>
-              <input
-                type="date"
-                value={calcEndDate}
-                onChange={(e) => setCalcEndDate(e.target.value)}
-                className="w-full text-xs font-mono bg-white border border-slate-300 rounded px-2 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-
-          {/* Search Bar & Category Filter */}
-          <div className="space-y-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Cari nama alat (cth: Sony, Mic, RCF)..."
-                value={calcSearchQuery}
-                onChange={(e) => setCalcSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-
-            {/* Category horizontal scroll tabs */}
-            <div className="flex gap-1 overflow-x-auto pb-1 text-xs">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors ${
-                    selectedCategory === cat
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Search Result Cards: Showing Real-Time Stock Availability */}
-          <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1">
-            {availabilityResults.length === 0 ? (
-              <div className="text-center py-8 text-xs text-slate-400">
-                Tidak ada alat ditemukan dengan kata kunci ini.
-              </div>
-            ) : (
-              availabilityResults.map(({ equipment, availableStock, maxAllocated, conflictingEvents, isDepleted }) => {
-                return (
-                  <div
-                    key={equipment.id}
-                    className={`p-3 rounded-lg border transition-all ${
-                      isDepleted
-                        ? 'border-red-200 bg-red-50/50'
-                        : availableStock <= 2
-                        ? 'border-amber-200 bg-amber-50/30'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-xs text-slate-900 truncate">
-                          {equipment.name}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
-                          {formatRupiah(equipment.dailyRate)} / hari
-                        </div>
-                      </div>
-
-                      {/* Stock Level Badge */}
-                      <div className="text-right shrink-0">
-                        {isDepleted ? (
-                          <span className="text-[11px] font-bold text-red-600 font-mono block">
-                            Stok: 0 Habis
-                          </span>
-                        ) : (
-                          <span className="text-[11px] font-bold text-slate-800 font-mono block">
-                            Sisa: <strong className="text-indigo-600">{availableStock}</strong> / {equipment.totalStock}
-                          </span>
-                        )}
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          Dipinjam: {maxAllocated} Unit
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Conflict Explanation or Safe Status (UX PENTING Blueprint) */}
-                    <div className="mt-2 text-[11px] pt-2 border-t border-slate-100 flex flex-col gap-1.5">
-                      {isDepleted ? (
-                        <div className="text-red-700 bg-red-100/60 p-1.5 rounded text-[11px] leading-relaxed flex items-start gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-red-600 mt-0.5" />
-                          <div>
-                            <strong>Bentrok Stok!</strong> Habis terpakai di{' '}
-                            {conflictingEvents.map((c) => `"${c.eventName}" (${c.allocatedQty} unit)`).join(', ')}.
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-emerald-700 text-[11px] flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          <span>Tersedia untuk disewa pada tanggal ini.</span>
-                        </div>
-                      )}
-
-                      {/* Booking Action Button */}
-                      <button
-                        disabled={isDepleted}
-                        onClick={() => {
-                          if (onOpenNewBookingWithItem) {
-                            onOpenNewBookingWithItem(equipment.id, calcStartDate, calcEndDate);
-                          } else {
-                            onOpenNewBooking();
-                          }
-                        }}
-                        className={`w-full py-1.5 px-3 rounded text-xs font-semibold transition-colors flex items-center justify-center gap-1 mt-1 ${
-                          isDepleted
-                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
-                        }`}
-                      >
-                        {isDepleted ? (
-                          <span>Stok Tidak Tersedia (Disabled)</span>
-                        ) : (
-                          <>
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>+ Booking Alat Ini</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+            })()}
           </div>
         </div>
       </div>
 
-      {/* MODAL: DETAIL EVENT & STATUS STOK */}
+      {/* ── MODAL: Selected Event Detail ── */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-backdrop-enter"
+          style={{ background: 'rgba(17,19,24,0.55)' }}
+        >
+          <div
+            className="panel-elevated max-w-xl w-full overflow-hidden animate-dialog-enter"
+            style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+          >
             {/* Modal Header */}
             <div
-              className={`p-4 border-b flex items-start justify-between ${
-                conflictMap.get(selectedEvent.id)?.hasConflict
-                  ? 'bg-red-50 border-red-200'
-                  : 'bg-slate-50 border-slate-200'
-              }`}
+              className="px-5 py-4 flex items-start justify-between gap-3"
+              style={{
+                background: conflictMap.get(selectedEvent.id)?.hasConflict
+                  ? 'rgba(190,18,60,0.04)'
+                  : '#f7f6f4',
+                borderBottom: '1px solid rgba(17,19,24,0.08)',
+              }}
             >
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-base text-slate-900">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3
+                    className="text-[16px] font-bold truncate"
+                    style={{ color: '#111318' }}
+                  >
                     {selectedEvent.eventName}
                   </h3>
                   {conflictMap.get(selectedEvent.id)?.hasConflict && (
-                    <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                    <span className="badge-carmine flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" />
                       Bentrok Stok
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                <div
+                  className="text-[13px] mt-1 flex items-center gap-2"
+                  style={{ color: '#6b7280' }}
+                >
                   <span>{selectedEvent.clientName}</span>
                   <span aria-hidden="true">·</span>
-                  <span>{formatDateIndo(selectedEvent.startDate)} - {formatDateIndo(selectedEvent.endDate)}</span>
+                  <span className="font-mono text-[12px]">
+                    {formatDateIndo(selectedEvent.startDate)} – {formatDateIndo(selectedEvent.endDate)}
+                  </span>
                 </div>
               </div>
 
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors"
+                className="btn-ghost p-1.5 shrink-0"
               >
-                <XCircle className="w-5 h-5" />
+                <XCircle className="w-4 h-4" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
-              {/* If Conflict: Show breakdown and Solutions */}
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+              {/* Conflict Detail Section */}
               {conflictMap.get(selectedEvent.id)?.hasConflict && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3.5 space-y-2">
-                  <div className="font-bold text-xs text-red-900 flex items-center gap-1.5">
-                    <ShieldAlert className="w-4 h-4 text-red-600" />
-                    <span>Rincian Masalah Double-Booking:</span>
+                <div
+                  className="rounded-lg p-4 space-y-3"
+                  style={{
+                    background: 'rgba(190,18,60,0.05)',
+                    border: '1px solid rgba(190,18,60,0.2)',
+                  }}
+                >
+                  <div
+                    className="text-[12px] font-bold flex items-center gap-2"
+                    style={{ color: '#be123c' }}
+                  >
+                    <ShieldAlert className="w-4 h-4" />
+                    Rincian Masalah Double-Booking
                   </div>
-                  <ul className="text-xs text-red-800 list-disc list-inside space-y-1">
+                  <ul className="space-y-1">
                     {conflictMap.get(selectedEvent.id)?.details.map((det, i) => (
-                      <li key={i}>{det}</li>
+                      <li
+                        key={i}
+                        className="text-[12px] leading-snug flex items-start gap-2"
+                        style={{ color: '#9f1239' }}
+                      >
+                        <span className="mt-1 shrink-0">·</span>
+                        {det}
+                      </li>
                     ))}
                   </ul>
 
-                  {/* Pemberitahuan Stok Menipis / Kritis (Terapkan Solusi Ditiadakan) */}
-                  <div className="mt-3 pt-3 border-t border-red-200">
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs">
-                      <div className="font-bold text-amber-900 flex items-center gap-1.5 mb-1">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Pemberitahuan: Stok Menipis / Kuota Unit Habis!</span>
-                      </div>
-                      <p className="text-amber-800 text-[11px] leading-relaxed">
-                        Ketersediaan fisik unit di gudang tidak mencukupi untuk memenuhi permintaan event ini pada tanggal tersebut. 
-                        Silakan hubungi tim logistik/gudang untuk penyesuaian unit atau komunikasi ulang jadwal dengan klien.
-                      </p>
+                  {/* Warning note */}
+                  <div
+                    className="rounded-md p-3"
+                    style={{
+                      background: 'rgba(217,119,6,0.07)',
+                      border: '1px solid rgba(217,119,6,0.2)',
+                    }}
+                  >
+                    <div
+                      className="text-[11px] font-bold flex items-center gap-1.5 mb-1"
+                      style={{ color: '#92400e' }}
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      Stok Menipis / Kuota Unit Habis
                     </div>
+                    <p className="text-[11px] leading-relaxed" style={{ color: '#92400e' }}>
+                      Ketersediaan fisik unit tidak mencukupi pada tanggal tersebut. Hubungi tim
+                      logistik untuk penyesuaian atau komunikasi ulang jadwal dengan klien.
+                    </p>
                   </div>
                 </div>
               )}
 
-              {/* Equipment Items List */}
+              {/* Equipment Items */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Daftar Alat yang Dipesan ({selectedEvent.items.length} Item)
-                </h4>
-                <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden">
+                <div className="section-label mb-3">
+                  Daftar Alat yang Dipesan ({selectedEvent.items.length} item)
+                </div>
+                <div
+                  className="rounded-lg overflow-hidden"
+                  style={{ border: '1px solid rgba(17,19,24,0.08)' }}
+                >
                   {selectedEvent.items.map((item, idx) => (
-                    <div key={idx} className="p-3 text-xs flex items-center justify-between bg-white">
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between px-4 py-3"
+                      style={{
+                        borderBottom:
+                          idx < selectedEvent.items.length - 1
+                            ? '1px solid rgba(17,19,24,0.06)'
+                            : undefined,
+                        background: '#fefdfb',
+                      }}
+                    >
                       <div>
-                        <div className="font-medium text-slate-800">{item.equipmentName}</div>
-                        <div className="text-[11px] text-slate-500">
-                          {item.quantity} Unit x {item.days} Hari @ {formatRupiah(item.dailyRate)}
+                        <div
+                          className="text-[13px] font-medium"
+                          style={{ color: '#111318' }}
+                        >
+                          {item.equipmentName}
+                        </div>
+                        <div
+                          className="font-mono text-[11px] mt-0.5"
+                          style={{ color: '#9ca3af' }}
+                        >
+                          {item.quantity} unit × {item.days} hari @ {formatRupiah(item.dailyRate)}
                         </div>
                       </div>
-                      <div className="font-mono font-bold text-slate-900">
+                      <div
+                        className="font-mono text-[13px] font-bold"
+                        style={{ color: '#111318' }}
+                      >
                         {formatRupiah(item.subtotal)}
                       </div>
                     </div>
@@ -596,28 +819,59 @@ export const CalendarConflictView: React.FC<CalendarConflictViewProps> = ({
                 </div>
               </div>
 
-              {/* Financial & Logistics Info */}
-              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200">
+              {/* Financial Summary */}
+              <div
+                className="grid grid-cols-2 gap-4 p-4 rounded-lg"
+                style={{
+                  background: '#f7f6f4',
+                  border: '1px solid rgba(17,19,24,0.08)',
+                }}
+              >
                 <div>
-                  <span className="text-slate-500 block">Total Tagihan:</span>
-                  <span className="font-mono font-bold text-slate-900 text-sm">
+                  <span
+                    className="text-[11px] block mb-1"
+                    style={{ color: '#9ca3af' }}
+                  >
+                    Total Tagihan
+                  </span>
+                  <span
+                    className="font-mono font-bold text-[15px]"
+                    style={{ color: '#111318' }}
+                  >
                     {formatRupiah(selectedEvent.totalAmount)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Status Pembayaran:</span>
-                  <span className="font-semibold text-slate-800">
-                    {selectedEvent.paymentStatus} ({formatRupiah(selectedEvent.paidAmount)} diterima)
+                  <span
+                    className="text-[11px] block mb-1"
+                    style={{ color: '#9ca3af' }}
+                  >
+                    Status Pembayaran
                   </span>
+                  <span
+                    className="text-[12px] font-semibold"
+                    style={{ color: '#374151' }}
+                  >
+                    {selectedEvent.paymentStatus}
+                  </span>
+                  <div
+                    className="font-mono text-[11px] mt-0.5"
+                    style={{ color: '#9ca3af' }}
+                  >
+                    {formatRupiah(selectedEvent.paidAmount)} diterima
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+            <div
+              className="px-5 py-3.5 flex justify-end gap-2"
+              style={{ borderTop: '1px solid rgba(17,19,24,0.08)', background: '#f7f6f4' }}
+            >
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-medium"
+                className="btn-ghost text-[12px] px-4 py-1.5"
               >
                 Tutup
               </button>

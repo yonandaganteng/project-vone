@@ -7,12 +7,10 @@ import {
   Check,
   AlertCircle,
   Clock,
-  Sparkles,
   ChevronDown,
   ChevronUp,
   MapPin,
   Calendar,
-  Volume2,
   Pencil,
   Wrench,
 } from 'lucide-react';
@@ -31,6 +29,13 @@ interface WarehouseManifestViewProps {
     eventId: string,
     newStatus: 'Keluar Gudang' | 'Kembali / Selesai'
   ) => void;
+}
+
+/** Maps item status to a step index (0-based) for the 3-step progress dots */
+function statusToStep(status: string): number {
+  if (status === 'Keluar Gudang') return 1;
+  if (status === 'Kembali / Selesai') return 2;
+  return 0;
 }
 
 export const WarehouseManifestView: React.FC<WarehouseManifestViewProps> = ({
@@ -84,173 +89,322 @@ export const WarehouseManifestView: React.FC<WarehouseManifestViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Touch-Friendly Warehouse Header (Blueprint Point 5) */}
-      <div className="bg-slate-900 text-white p-5 rounded-xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-slate-800">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-indigo-600 rounded-lg text-white">
-              <Truck className="w-5 h-5" />
-            </span>
-            <h2 className="text-base sm:text-lg font-bold tracking-tight text-white">
-              Jadwal Loading & Manifest Gudang: 10 Oktober 2026
-            </h2>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Mode Staf Gudang (Tablet & Touch-Ready). Ketuk tombol untuk memperbarui status perpindahan fisik alat.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700 text-xs font-mono">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Scanner Barcode Fisik: Siap Digunakan</span>
-        </div>
+    <div className="relative space-y-6 animate-page-enter">
+      {/* Ambient warehouse scan background */}
+      <div className="ambient-warehouse-scan" aria-hidden="true">
+        <div className="ambient-warehouse-scan-line" />
       </div>
 
-      {/* Accordion List per Event (Blueprint Point 5) */}
-      <div className="space-y-4">
-        {manifests.map((manifest) => {
-          const isExpanded = expandedEventId === manifest.eventId;
+      {/* All interactive content sits above the ambient layer */}
+      <div className="relative z-10 space-y-6">
 
-          // Calculate counts and progress bar
-          const totalItems = manifest.items.reduce((s, it) => s + it.quantity, 0);
-          const returnedItems = manifest.items
-            .filter((it) => it.status === 'Kembali / Selesai')
-            .reduce((s, it) => s + it.quantity, 0);
-          const outItems = manifest.items
-            .filter((it) => it.status === 'Keluar Gudang')
-            .reduce((s, it) => s + it.quantity, 0);
-
-          const returnProgress = totalItems > 0 ? Math.round((returnedItems / totalItems) * 100) : 0;
-          const outProgress = totalItems > 0 ? Math.round(((outItems + returnedItems) / totalItems) * 100) : 0;
-
-          return (
-            <div
-              key={manifest.eventId}
-              className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all"
+        {/* Warehouse Header — dark ink surface */}
+        <div
+          className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-5 py-4"
+          style={{
+            background: '#1a1d24',
+            borderRadius: '10px',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <span
+              className="p-2 mt-0.5 flex-shrink-0"
+              style={{ background: '#4f46e5', borderRadius: '8px' }}
             >
-              {/* Accordion Header - Big Touch Target */}
+              <Truck className="w-5 h-5 text-white" />
+            </span>
+            <div>
+              <h2 className="text-base font-bold text-white tracking-tight leading-snug">
+                Jadwal Loading &amp; Manifest Gudang
+              </h2>
+              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Mode Staf Gudang — Tablet &amp; Touch-Ready. Ketuk tombol untuk memperbarui status perpindahan fisik alat.
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 font-mono text-[11px]"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '7px',
+              color: 'rgba(255,255,255,0.7)',
+            }}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Scanner Barcode Fisik: Siap
+          </div>
+        </div>
+
+        {/* Empty state */}
+        {manifests.length === 0 && (
+          <div className="panel py-16 text-center">
+            <PackageCheck className="w-10 h-10 mx-auto mb-3" style={{ color: 'rgba(17,19,24,0.2)' }} />
+            <p className="text-sm font-semibold" style={{ color: 'rgba(17,19,24,0.5)' }}>
+              Belum ada manifest gudang
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'rgba(17,19,24,0.35)' }}>
+              Buat booking baru untuk menghasilkan manifest otomatis.
+            </p>
+          </div>
+        )}
+
+        {/* Accordion list per event */}
+        <div className="space-y-3">
+          {manifests.map((manifest, mIdx) => {
+            const isExpanded = expandedEventId === manifest.eventId;
+
+            // Progress calculations
+            const totalItems = manifest.items.reduce((s, it) => s + it.quantity, 0);
+            const returnedItems = manifest.items
+              .filter((it) => it.status === 'Kembali / Selesai')
+              .reduce((s, it) => s + it.quantity, 0);
+            const outItems = manifest.items
+              .filter((it) => it.status === 'Keluar Gudang')
+              .reduce((s, it) => s + it.quantity, 0);
+
+            const returnProgress = totalItems > 0 ? Math.round((returnedItems / totalItems) * 100) : 0;
+
+            // Overall event status badge
+            const allReturned = returnedItems === totalItems && totalItems > 0;
+            const someOut = outItems > 0 || returnedItems > 0;
+
+            return (
               <div
-                onClick={() => toggleAccordion(manifest.eventId)}
-                className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition-colors select-none"
+                key={manifest.eventId}
+                className={`panel overflow-hidden transition-all stagger-${Math.min(mIdx + 1, 8)}`}
+                style={{ borderRadius: '10px' }}
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm sm:text-base text-slate-900">
-                      {manifest.eventName}
-                    </span>
-                    <span className="text-xs font-mono text-slate-400 font-semibold">
-                      #{manifest.eventCode}
-                    </span>
-                  </div>
-                  <div className="text-xs text-slate-500 flex flex-wrap items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                      {manifest.location}
-                    </span>
-                    <span aria-hidden="true">·</span>
-                    <span className="flex items-center gap-1 font-mono">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      {manifest.startDate} s/d {manifest.endDate}
-                    </span>
-                    <span aria-hidden="true">·</span>
-                    <span>Klien: {manifest.clientName}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                  {/* Progress Pill */}
-                  <div className="text-right">
-                    <div className="text-xs font-bold text-slate-800 font-mono">
-                      {returnedItems} / {totalItems} Unit Kembali
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-mono">
-                      ({returnProgress}% Selesai)
-                    </div>
-                  </div>
-
-                  <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
-                    {isExpanded ? (
-                      <ChevronUp className="w-5 h-5" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5" />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* PROGRESS BAR DI ATAS LIST (Blueprint Point 5) */}
-              <div className="w-full bg-slate-100 h-2">
+                {/* Accordion Header — big touch target, min 56px */}
                 <div
-                  className="h-full bg-emerald-500 transition-all duration-300"
-                  style={{ width: `${returnProgress}%` }}
-                />
-              </div>
+                  onClick={() => toggleAccordion(manifest.eventId)}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-5 cursor-pointer select-none transition-colors"
+                  style={{ minHeight: '56px', paddingTop: '14px', paddingBottom: '14px' }}
+                  role="button"
+                  aria-expanded={isExpanded}
+                >
+                  <div className="space-y-1.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm" style={{ color: '#111318' }}>
+                        {manifest.eventName}
+                      </span>
+                      <span className="font-mono text-[11px] font-semibold px-1.5 py-0.5 rounded" style={{ background: 'rgba(17,19,24,0.05)', color: 'rgba(17,19,24,0.45)' }}>
+                        #{manifest.eventCode}
+                      </span>
+                      {allReturned ? (
+                        <span className="badge-emerald">Selesai</span>
+                      ) : someOut ? (
+                        <span className="badge-amber">Keluar Gudang</span>
+                      ) : (
+                        <span className="badge-ink">Persiapan</span>
+                      )}
+                    </div>
 
-              {/* Accordion Content (Manifest Checklist) */}
-              {isExpanded && (
-                <div className="p-4 sm:p-6 bg-slate-50/50 space-y-5 border-t border-slate-200">
-                  {/* Bulk Quick Actions Toolbar */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 text-xs">
-                    <span className="font-semibold text-slate-700">
-                      Tindakan Cepat Staf Gudang:
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onBulkUpdateStatus(manifest.eventId, 'Keluar Gudang')}
-                        className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-md font-semibold text-xs transition-colors"
-                      >
-                        Tandai Semua: Keluar Gudang
-                      </button>
-                      <button
-                        onClick={() => onBulkUpdateStatus(manifest.eventId, 'Kembali / Selesai')}
-                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-md font-semibold text-xs transition-colors"
-                      >
-                        Tandai Semua: Kembali Lengkap
-                      </button>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" style={{ color: 'rgba(17,19,24,0.45)' }}>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {manifest.location}
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <span className="flex items-center gap-1 font-mono">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {manifest.startDate} s/d {manifest.endDate}
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <span>{manifest.clientName}</span>
                     </div>
                   </div>
 
-                  {/* List Alat dalam Manifest */}
-                  <div className="space-y-3">
-                    {manifest.items.map((item) => {
-                      return (
-                        <div
-                          key={item.id}
-                          className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all"
+                  <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end shrink-0">
+                    {/* Return progress */}
+                    <div className="text-right">
+                      <div className="font-mono text-xs font-bold tabular-nums" style={{ color: '#111318' }}>
+                        {returnedItems}/{totalItems} Kembali
+                      </div>
+                      <div className="font-mono text-[11px] tabular-nums" style={{ color: 'rgba(17,19,24,0.4)' }}>
+                        {returnProgress}% Selesai
+                      </div>
+                    </div>
+
+                    <div
+                      className="p-1.5 transition-colors"
+                      style={{
+                        background: 'rgba(17,19,24,0.05)',
+                        borderRadius: '7px',
+                        color: 'rgba(17,19,24,0.5)',
+                      }}
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Overall progress bar */}
+                <div className="progress-bar-track" style={{ borderRadius: 0, height: '3px' }}>
+                  <div
+                    className="progress-bar-fill"
+                    style={{ width: `${returnProgress}%` }}
+                  />
+                </div>
+
+                {/* Accordion Content */}
+                {isExpanded && (
+                  <div
+                    className="animate-slide-in-right"
+                    style={{ borderTop: '1px solid rgba(17,19,24,0.06)' }}
+                  >
+                    {/* Bulk Action Bar */}
+                    <div
+                      className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
+                      style={{
+                        background: 'rgba(17,19,24,0.025)',
+                        borderBottom: '1px solid rgba(17,19,24,0.06)',
+                      }}
+                    >
+                      <span className="text-[11px] font-semibold uppercase tracking-wider section-label">
+                        Tindakan Cepat
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => onBulkUpdateStatus(manifest.eventId, 'Keluar Gudang')}
+                          className="btn-ghost text-xs px-3 py-1.5"
                         >
-                          {/* Item Info & Barcode */}
-                          <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm text-slate-900">
-                                {item.name}
-                              </span>
-                              <span className="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                                {item.quantity} Unit
-                              </span>
-                            </div>
+                          Semua Keluar Gudang
+                        </button>
+                        <button
+                          onClick={() => onBulkUpdateStatus(manifest.eventId, 'Kembali / Selesai')}
+                          className="btn-primary text-xs px-3 py-1.5"
+                        >
+                          Semua Kembali Lengkap
+                        </button>
+                      </div>
+                    </div>
 
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-mono">
-                              <span className="flex items-center gap-1 text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded font-bold">
-                                <QrCode className="w-3.5 h-3.5" />
-                                {item.barcode}
-                              </span>
-                              <span aria-hidden="true">·</span>
-                              <span>Kategori: {item.category}</span>
-                              {item.checkedOutAt && (
-                                <>
-                                  <span aria-hidden="true">·</span>
-                                  <span>Keluar: {item.checkedOutAt}</span>
-                                </>
-                              )}
-                            </div>
+                    {/* Item rows */}
+                    <div className="divide-y" style={{ '--tw-divide-opacity': 1, borderColor: 'rgba(17,19,24,0.05)' } as React.CSSProperties}>
+                      {manifest.items.map((item) => {
+                        const step = statusToStep(item.status);
+                        const steps = ['Persiapan', 'Keluar Gudang', 'Kembali'];
 
-                            {/* Catatan Kondisi Alat yang Dapat Diedit oleh Role Gudang */}
-                            <div className="flex items-center gap-2 mt-1 max-w-xl">
-                              <div className="text-[11px] text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 flex-1">
-                                <span className="font-semibold text-slate-900">Kondisi Fisik:</span>{' '}
-                                {item.conditionNotes || 'Kondisi fisik prima, siap pakai'}
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-5 py-4 transition-colors table-row-hover"
+                            style={{ minHeight: '48px' }}
+                          >
+                            {/* Item Info */}
+                            <div className="space-y-2 min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-sm" style={{ color: '#111318' }}>
+                                  {item.name}
+                                </span>
+                                <span
+                                  className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded"
+                                  style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5' }}
+                                >
+                                  {item.quantity} Unit
+                                </span>
                               </div>
+
+                              {/* Barcode & timestamps */}
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-mono" style={{ color: 'rgba(17,19,24,0.45)' }}>
+                                <span
+                                  className="flex items-center gap-1 px-1.5 py-0.5 rounded font-bold"
+                                  style={{ background: 'rgba(79,70,229,0.07)', color: '#4f46e5' }}
+                                >
+                                  <QrCode className="w-3 h-3" />
+                                  {item.barcode}
+                                </span>
+                                <span aria-hidden="true">·</span>
+                                <span>{item.category}</span>
+                                {item.checkedOutAt && (
+                                  <>
+                                    <span aria-hidden="true">·</span>
+                                    <span>Keluar: {item.checkedOutAt}</span>
+                                  </>
+                                )}
+                                {item.checkedInAt && (
+                                  <>
+                                    <span aria-hidden="true">·</span>
+                                    <span>Kembali: {item.checkedInAt}</span>
+                                  </>
+                                )}
+                              </div>
+
+                              {/* Condition note */}
+                              <div className="flex items-center gap-2 max-w-lg">
+                                <div
+                                  className="text-[11px] flex-1 px-2.5 py-1 rounded"
+                                  style={{
+                                    background: 'rgba(17,19,24,0.035)',
+                                    border: '1px solid rgba(17,19,24,0.07)',
+                                    color: 'rgba(17,19,24,0.6)',
+                                  }}
+                                >
+                                  <span className="font-semibold" style={{ color: '#111318' }}>Kondisi:</span>{' '}
+                                  {item.conditionNotes || 'Kondisi fisik prima, siap pakai'}
+                                </div>
+                                <button
+                                  onClick={() =>
+                                    setEditingConditionItem({
+                                      eventId: manifest.eventId,
+                                      item,
+                                      noteText: item.conditionNotes || 'Kondisi fisik prima, siap pakai',
+                                    })
+                                  }
+                                  className="text-[11px] font-semibold flex items-center gap-0.5 shrink-0"
+                                  style={{ color: '#4f46e5' }}
+                                  title="Edit catatan fisik barang"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  Edit
+                                </button>
+                              </div>
+
+                              {/* 3-step progress dots */}
+                              <div className="flex items-center gap-1.5 pt-0.5">
+                                {steps.map((s, i) => (
+                                  <React.Fragment key={s}>
+                                    <div
+                                      className="flex items-center gap-1 text-[10px] font-semibold"
+                                      style={{
+                                        color: i <= step
+                                          ? (i === 2 ? '#059669' : i === 1 ? '#d97706' : '#4f46e5')
+                                          : 'rgba(17,19,24,0.25)',
+                                      }}
+                                    >
+                                      <div
+                                        className="w-2 h-2 rounded-full transition-all"
+                                        style={{
+                                          background: i <= step
+                                            ? (i === 2 ? '#059669' : i === 1 ? '#d97706' : '#4f46e5')
+                                            : 'rgba(17,19,24,0.15)',
+                                        }}
+                                      />
+                                      <span className="hidden sm:inline">{s}</span>
+                                    </div>
+                                    {i < 2 && (
+                                      <div
+                                        className="h-px flex-1 max-w-[20px] transition-all"
+                                        style={{
+                                          background: i < step ? '#4f46e5' : 'rgba(17,19,24,0.12)',
+                                        }}
+                                      />
+                                    )}
+                                  </React.Fragment>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Controls */}
+                            <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end shrink-0">
+                              {/* Edit condition button (secondary, icon) */}
                               <button
                                 onClick={() =>
                                   setEditingConditionItem({
@@ -259,140 +413,160 @@ export const WarehouseManifestView: React.FC<WarehouseManifestViewProps> = ({
                                     noteText: item.conditionNotes || 'Kondisi fisik prima, siap pakai',
                                   })
                                 }
-                                className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 underline shrink-0 flex items-center gap-0.5"
-                                title="Role Gudang: Edit catatan fisik barang"
+                                className="btn-ghost px-2.5 py-2 text-xs flex items-center gap-1"
+                                title="Edit Kondisi Fisik Alat (Role Gudang)"
                               >
-                                <Pencil className="w-3 h-3" />
-                                <span>Edit</span>
+                                <Wrench className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Kondisi</span>
                               </button>
+
+                              {/* Scan button */}
+                              <button
+                                onClick={() => handleSimulateScan(manifest.eventId, item)}
+                                className="btn-ghost px-2.5 py-2 text-xs flex items-center gap-1"
+                                title="Simulasi Scan Barcode"
+                              >
+                                <QrCode className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Scan</span>
+                              </button>
+
+                              {/* 3-state segmented toggle */}
+                              <div
+                                className="flex items-center p-1 gap-0.5 text-xs"
+                                style={{
+                                  background: 'rgba(17,19,24,0.06)',
+                                  border: '1px solid rgba(17,19,24,0.08)',
+                                  borderRadius: '8px',
+                                }}
+                              >
+                                {/* State 1: Persiapan */}
+                                <button
+                                  onClick={() =>
+                                    onUpdateItemStatus(manifest.eventId, item.id, 'Persiapan')
+                                  }
+                                  className="px-2.5 py-1.5 rounded font-semibold transition-all"
+                                  style={
+                                    item.status === 'Persiapan'
+                                      ? {
+                                          background: '#fff',
+                                          color: '#111318',
+                                          boxShadow: '0 1px 3px rgba(17,19,24,0.12)',
+                                          border: '1px solid rgba(17,19,24,0.08)',
+                                        }
+                                      : { color: 'rgba(17,19,24,0.4)' }
+                                  }
+                                >
+                                  Persiapan
+                                </button>
+
+                                {/* State 2: Keluar Gudang */}
+                                <button
+                                  onClick={() =>
+                                    onUpdateItemStatus(manifest.eventId, item.id, 'Keluar Gudang')
+                                  }
+                                  className="px-2.5 py-1.5 rounded font-semibold transition-all"
+                                  style={
+                                    item.status === 'Keluar Gudang'
+                                      ? { background: '#d97706', color: '#fff' }
+                                      : { color: 'rgba(17,19,24,0.4)' }
+                                  }
+                                >
+                                  Keluar
+                                </button>
+
+                                {/* State 3: Kembali / Selesai */}
+                                <button
+                                  onClick={() =>
+                                    onUpdateItemStatus(manifest.eventId, item.id, 'Kembali / Selesai')
+                                  }
+                                  className="px-2.5 py-1.5 rounded font-semibold transition-all"
+                                  style={
+                                    item.status === 'Kembali / Selesai'
+                                      ? { background: '#059669', color: '#fff' }
+                                      : { color: 'rgba(17,19,24,0.4)' }
+                                  }
+                                >
+                                  Kembali
+                                </button>
+                              </div>
                             </div>
                           </div>
-
-                          {/* TOGGLE/SWITCH STATUS 3-TAHAP & KONTROL GUDANG */}
-                          <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end shrink-0">
-                            {/* Tombol Edit Kondisi Barang (Role Gudang) */}
-                            <button
-                              onClick={() =>
-                                setEditingConditionItem({
-                                  eventId: manifest.eventId,
-                                  item,
-                                  noteText: item.conditionNotes || 'Kondisi fisik prima, siap pakai',
-                                })
-                              }
-                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                              title="Edit Kondisi Fisik Alat (Role Gudang)"
-                            >
-                              <Wrench className="w-3.5 h-3.5 text-slate-500" />
-                              <span className="hidden sm:inline">Kondisi</span>
-                            </button>
-
-                            <button
-                              onClick={() => handleSimulateScan(manifest.eventId, item)}
-                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                              title="Simulasi Scan Barcode"
-                            >
-                              <QrCode className="w-4 h-4 text-slate-500" />
-                              <span className="hidden sm:inline">Scan</span>
-                            </button>
-
-                            {/* 3 State Toggle Segmented Controls (Large Touch Target) */}
-                            <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 gap-1 text-xs">
-                              {/* State 1: Persiapan (Abu-abu) */}
-                              <button
-                                onClick={() =>
-                                  onUpdateItemStatus(manifest.eventId, item.id, 'Persiapan')
-                                }
-                                className={`px-2.5 sm:px-3 py-1.5 rounded-md font-semibold transition-all ${
-                                  item.status === 'Persiapan'
-                                    ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                                    : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                              >
-                                Persiapan
-                              </button>
-
-                              {/* State 2: Keluar Gudang (Kuning) */}
-                              <button
-                                onClick={() =>
-                                  onUpdateItemStatus(manifest.eventId, item.id, 'Keluar Gudang')
-                                }
-                                className={`px-2.5 sm:px-3 py-1.5 rounded-md font-semibold transition-all ${
-                                  item.status === 'Keluar Gudang'
-                                    ? 'bg-amber-500 text-white shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                              >
-                                Keluar Gudang
-                              </button>
-
-                              {/* State 3: Kembali / Selesai (Hijau) */}
-                              <button
-                                onClick={() =>
-                                  onUpdateItemStatus(manifest.eventId, item.id, 'Kembali / Selesai')
-                                }
-                                className={`px-2.5 sm:px-3 py-1.5 rounded-md font-semibold transition-all ${
-                                  item.status === 'Kembali / Selesai'
-                                    ? 'bg-emerald-600 text-white shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                              >
-                                Kembali
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* BARCODE SCANNER SIMULATION MODAL */}
+      {/* BARCODE SCANNER SIMULATION MODAL — dark ink surface */}
       {activeScannerItem && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4 border border-slate-200 animate-in fade-in zoom-in-95 duration-100">
-            <div className="w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center">
-              <QrCode className="w-8 h-8" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-backdrop-enter" style={{ background: 'rgba(17,19,24,0.82)' }}>
+          <div
+            className="max-w-sm w-full text-center space-y-5 animate-dialog-enter"
+            style={{
+              background: '#1a1d24',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '12px',
+              padding: '28px 24px',
+            }}
+          >
+            {/* Icon */}
+            <div
+              className="w-16 h-16 mx-auto flex items-center justify-center"
+              style={{ background: 'rgba(79,70,229,0.15)', borderRadius: '50%' }}
+            >
+              <QrCode className="w-8 h-8" style={{ color: '#6366f1' }} />
             </div>
 
+            {/* Title */}
             <div>
-              <h3 className="font-bold text-base text-slate-900">
+              <h3 className="font-bold text-base text-white tracking-tight">
                 Simulasi Scan Barcode Alat
               </h3>
-              <p className="text-xs text-slate-500 mt-1 font-mono">
-                {activeScannerItem.item.name} ({activeScannerItem.item.barcode})
+              <p className="font-mono text-sm mt-2 px-3 py-2 rounded" style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                {activeScannerItem.item.barcode}
+              </p>
+              <p className="text-xs mt-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                {activeScannerItem.item.name}
               </p>
             </div>
 
+            {/* Scan feedback or action buttons */}
             {scannedFeedback ? (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <div
+                className="px-4 py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
+                style={{ background: 'rgba(5,150,105,0.15)', border: '1px solid rgba(5,150,105,0.25)', color: '#10b981' }}
+              >
+                <CheckCircle2 className="w-5 h-5" />
                 <span>{scannedFeedback}</span>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2 pt-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => executeBarcodeCheck('Keluar Gudang')}
-                  className="py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+                  className="py-3 px-4 text-sm font-bold rounded-lg transition-all"
+                  style={{ background: '#d97706', color: '#fff' }}
                 >
-                  Scan: Keluar Gudang
+                  Keluar Gudang
                 </button>
                 <button
                   onClick={() => executeBarcodeCheck('Kembali / Selesai')}
-                  className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+                  className="py-3 px-4 text-sm font-bold rounded-lg transition-all"
+                  style={{ background: '#059669', color: '#fff' }}
                 >
-                  Scan: Cek Kembali
+                  Cek Kembali
                 </button>
               </div>
             )}
 
             <button
               onClick={() => setActiveScannerItem(null)}
-              className="text-xs text-slate-400 hover:text-slate-600 pt-2 block mx-auto"
+              className="text-xs block mx-auto pt-1 transition-colors"
+              style={{ color: 'rgba(255,255,255,0.3)' }}
             >
               Batalkan
             </button>
@@ -402,32 +576,46 @@ export const WarehouseManifestView: React.FC<WarehouseManifestViewProps> = ({
 
       {/* MODAL: EDIT KONDISI FISIK BARANG (ROLE: STAF GUDANG) */}
       {editingConditionItem && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wrench className="w-5 h-5 text-indigo-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-backdrop-enter" style={{ background: 'rgba(17,19,24,0.72)' }}>
+          <div
+            className="max-w-md w-full overflow-hidden animate-dialog-enter"
+            style={{
+              background: '#fefdfb',
+              border: '1px solid rgba(17,19,24,0.1)',
+              borderRadius: '12px',
+              boxShadow: '0 20px 60px rgba(17,19,24,0.25)',
+            }}
+          >
+            {/* Modal header — dark surface */}
+            <div
+              className="px-5 py-4 flex items-center justify-between"
+              style={{ background: '#1a1d24' }}
+            >
+              <div className="flex items-center gap-2.5">
+                <Wrench className="w-4 h-4" style={{ color: '#6366f1' }} />
                 <div>
                   <h3 className="font-bold text-sm text-white">
-                    Edit Kondisi Fisik Alat (Role Gudang)
+                    Edit Kondisi Fisik Alat
                   </h3>
-                  <p className="text-[11px] text-slate-400 font-mono">
+                  <p className="font-mono text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
                     {editingConditionItem.item.name}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setEditingConditionItem(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-sm font-bold transition-colors"
+                style={{ color: 'rgba(255,255,255,0.35)' }}
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs">
+            {/* Modal body */}
+            <div className="p-5 space-y-4">
               <div>
-                <label className="font-bold text-slate-800 block mb-1.5">
-                  Pilih Preset Status Fisik:
+                <label className="field-label mb-2 block">
+                  Pilih Preset Status Fisik
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
@@ -447,17 +635,31 @@ export const WarehouseManifestView: React.FC<WarehouseManifestViewProps> = ({
                           noteText: preset,
                         })
                       }
-                      className="p-2 text-left bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300 border border-slate-200 rounded text-[11px] font-medium transition-colors"
+                      className="p-2 text-left rounded text-[11px] font-medium transition-colors"
+                      style={{
+                        background:
+                          editingConditionItem.noteText === preset
+                            ? 'rgba(79,70,229,0.08)'
+                            : 'rgba(17,19,24,0.03)',
+                        border:
+                          editingConditionItem.noteText === preset
+                            ? '1px solid rgba(79,70,229,0.25)'
+                            : '1px solid rgba(17,19,24,0.08)',
+                        color:
+                          editingConditionItem.noteText === preset
+                            ? '#4f46e5'
+                            : 'rgba(17,19,24,0.6)',
+                      }}
                     >
-                      • {preset}
+                      · {preset}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-800 block mb-1">
-                  Catatan Detail Pemeriksaan Fisik Staf Gudang:
+                <label className="field-label mb-1.5 block">
+                  Catatan Detail Pemeriksaan Fisik
                 </label>
                 <textarea
                   rows={3}
@@ -469,19 +671,24 @@ export const WarehouseManifestView: React.FC<WarehouseManifestViewProps> = ({
                     })
                   }
                   placeholder="Contoh: Body kamera bersih, sensor bebas debu, baterai cadangan terpasang..."
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="field-input w-full text-xs"
+                  style={{ resize: 'vertical', minHeight: '72px' }}
                 />
-                <span className="text-[10px] text-slate-400 mt-1 block">
+                <span className="text-[10px] mt-1 block" style={{ color: 'rgba(17,19,24,0.4)' }}>
                   Catatan ini akan tersimpan dan dicantumkan pada manifest serah terima barang.
                 </span>
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+            {/* Modal footer */}
+            <div
+              className="px-5 py-3.5 flex justify-end gap-2"
+              style={{ borderTop: '1px solid rgba(17,19,24,0.07)', background: 'rgba(17,19,24,0.02)' }}
+            >
               <button
                 type="button"
                 onClick={() => setEditingConditionItem(null)}
-                className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-semibold"
+                className="btn-ghost text-xs px-4 py-2"
               >
                 Batal
               </button>
@@ -496,7 +703,7 @@ export const WarehouseManifestView: React.FC<WarehouseManifestViewProps> = ({
                   );
                   setEditingConditionItem(null);
                 }}
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shadow-sm"
+                className="btn-primary text-xs px-4 py-2"
               >
                 Simpan Catatan Kondisi
               </button>

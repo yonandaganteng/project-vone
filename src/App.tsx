@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   initialEquipment,
   initialBookings,
@@ -31,6 +31,7 @@ import { DashboardView } from './components/DashboardView';
 import { CalendarConflictView } from './components/CalendarConflictView';
 import { InvoiceDetailView } from './components/InvoiceDetailView';
 import { InventoryView } from './components/InventoryView';
+import { WarehouseManifestView } from './components/WarehouseManifestView';
 import { NewBookingModal } from './components/NewBookingModal';
 import { LoginView } from './components/LoginView';
 
@@ -69,6 +70,21 @@ export default function App() {
     startDate: string;
     endDate: string;
   } | null>(null);
+
+  // Pause ambient animations when tab is hidden (visibility API)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        document.body.classList.add('page-hidden');
+      } else {
+        document.body.classList.remove('page-hidden');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // Real-time Anti Double-Booking Conflict Scanner
   const conflictMap = useMemo(() => {
@@ -379,7 +395,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 antialiased">
+    <div className="min-h-screen app-bg flex font-sans antialiased">
       {/* Left Sidebar */}
       <Sidebar
         currentTab={currentTab}
@@ -394,7 +410,7 @@ export default function App() {
       />
 
       {/* Main Content Area (Offset by 64px width on desktop) */}
-      <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="lg:pl-64 flex flex-col min-h-screen w-full">
         {/* Sticky Header */}
         <Header
           currentTab={currentTab}
@@ -414,7 +430,7 @@ export default function App() {
         />
 
         {/* View Content Port */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto relative">
           {currentTab === 'dashboard' && (
             <DashboardView
               bookings={bookings}
@@ -481,20 +497,28 @@ export default function App() {
               onDeleteEquipment={handleDeleteEquipment}
             />
           )}
+
+          {currentTab === 'warehouse' && (
+            <WarehouseManifestView
+              manifests={warehouseManifests}
+              userRole={userRole}
+              onUpdateItemStatus={handleUpdateManifestItemStatus}
+              onBulkUpdateStatus={handleBulkUpdateManifestStatus}
+            />
+          )}
         </main>
 
-        {/* Quiet Minimalist Footer */}
-        <footer className="border-t border-slate-200 py-4 px-6 text-center text-xs text-slate-500 no-print">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto">
-            <span>
-              VendorOne SaaS &copy; 2026. Sistem Manajemen Rental & Anti Double-Booking.
-            </span>
-            <div className="flex items-center gap-4 text-[11px] text-slate-400">
-              <span>Algoritma Deteksi Bentrok: Aktif</span>
-              <span aria-hidden="true">·</span>
-              <span>JSON Snapshot Engine: Terkunci</span>
-            </div>
-          </div>
+        {/* Minimal Footer */}
+        <footer
+          className="no-print flex items-center justify-between py-3 px-6"
+          style={{ borderTop: '1px solid rgba(17,19,24,0.06)' }}
+        >
+          <span className="text-[11px] font-mono" style={{ color: 'rgba(17,19,24,0.35)' }}>
+            VendorOne &copy; 2026
+          </span>
+          <span className="text-[11px] font-mono" style={{ color: 'rgba(17,19,24,0.35)' }}>
+            Conflict Detection: Active
+          </span>
         </footer>
       </div>
 

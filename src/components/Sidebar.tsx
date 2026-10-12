@@ -26,6 +26,44 @@ interface SidebarProps {
   setIsOpenMobile: (open: boolean) => void;
 }
 
+/** SVG grid motif: 5×4 dot grid with a 3×1 indigo accent line */
+const GridMotif: React.FC = () => (
+  <svg
+    width="28"
+    height="28"
+    viewBox="0 0 28 28"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    {/* 5×4 dot grid */}
+    {[0, 1, 2, 3].map((row) =>
+      [0, 1, 2, 3, 4].map((col) => {
+        const isAccent = row === 0 && col <= 2;
+        return (
+          <circle
+            key={`${row}-${col}`}
+            cx={3 + col * 5.5}
+            cy={3 + row * 7}
+            r={1}
+            fill={isAccent ? '#6366f1' : 'rgba(255,255,255,0.25)'}
+          />
+        );
+      })
+    )}
+    {/* 3×1 accent connector line */}
+    <line
+      x1="3"
+      y1="3"
+      x2="14"
+      y2="3"
+      stroke="#4f46e5"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   setCurrentTab,
@@ -48,15 +86,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'calendar',
       label: 'Kalender & Cek Bentrok',
       icon: CalendarDays,
-      badge: conflictCount > 0 ? `${conflictCount} Bentrok` : null,
-      badgeColor: 'bg-red-500 text-white',
+      badge: conflictCount > 0 ? conflictCount : null,
     },
     {
       id: 'invoice',
       label: 'Invoice & Arsip Dokumen',
       icon: FileText,
-      badge: 'Arsip & Edit',
-      badgeColor: 'bg-indigo-100 text-indigo-700',
+      badge: null,
     },
     {
       id: 'inventory',
@@ -71,112 +107,173 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (isOpenMobile) setIsOpenMobile(false);
   };
 
+  const rolePillClass =
+    userRole === 'admin'
+      ? 'role-pill role-pill-admin'
+      : userRole === 'owner'
+      ? 'role-pill role-pill-owner'
+      : 'role-pill role-pill-warehouse';
+
+  const roleLabel =
+    userRole === 'owner'
+      ? 'Owner'
+      : userRole === 'warehouse'
+      ? 'Staf Gudang'
+      : 'Admin';
+
   return (
     <>
       {/* Mobile backdrop */}
       {isOpenMobile && (
         <div
-          className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 lg:hidden animate-backdrop-enter"
+          style={{ background: 'rgba(17,19,24,0.6)' }}
           onClick={() => setIsOpenMobile(false)}
         />
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 w-64 bg-slate-900 text-slate-200 flex flex-col transition-transform duration-200 ease-in-out border-r border-slate-800 ${
+        className={`nav-surface fixed top-0 bottom-0 left-0 z-40 w-64 flex flex-col transition-transform duration-200 ease-in-out ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        {/* Brand Header */}
-        <div className="h-16 flex items-center px-6 border-b border-slate-800 shrink-0 gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm shadow-md border border-indigo-400/30">
-            V1
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-base tracking-tight text-white flex items-center gap-1.5">
-              VendorOne <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono uppercase">SaaS</span>
+        {/* Brand Header — 64px */}
+        <div
+          className="h-16 flex items-center px-5 shrink-0 gap-3"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          <GridMotif />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[15px] font-bold tracking-tight text-white leading-none">
+              VendorOne
             </span>
-            <span className="text-[11px] text-slate-400 font-medium leading-none">
-              Rental & Stock Management
+            <span
+              className="font-mono text-[10px] leading-none"
+              style={{ color: '#10b981' }}
+            >
+              SYS ONLINE
             </span>
           </div>
         </div>
 
-        {/* Role Switcher Selector */}
-        <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/40">
-          <label className="text-[10px] font-semibold tracking-wider uppercase text-slate-400 block mb-1.5">
-            Peran Pengguna (Role Simulation)
-          </label>
-          <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-md border border-slate-800">
+        {/* Role Switcher */}
+        <div
+          className="px-4 py-3 shrink-0"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          <span className="section-label mb-2 block">Simulasi Peran</span>
+          <div className="flex gap-1">
+            {/* Admin */}
             <button
               onClick={() => setUserRole('admin')}
-              className={`py-1 text-xs font-medium rounded transition-colors flex items-center justify-center gap-1 ${
-                userRole === 'admin'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
               title="Role Admin: Akses operasional & booking"
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[11px] font-semibold transition-colors duration-150"
+              style={
+                userRole === 'admin'
+                  ? {
+                      background: 'rgba(79,70,229,0.18)',
+                      color: '#818cf8',
+                      border: '1px solid rgba(99,102,241,0.3)',
+                    }
+                  : {
+                      background: 'transparent',
+                      color: 'rgba(255,255,255,0.35)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }
+              }
             >
-              <UserCheck className="w-3 h-3" />
+              <UserCheck className="w-3 h-3 shrink-0" />
               <span>Admin</span>
             </button>
+
+            {/* Owner */}
             <button
               onClick={() => setUserRole('owner')}
-              className={`py-1 text-xs font-medium rounded transition-colors flex items-center justify-center gap-1 ${
-                userRole === 'owner'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
               title="Role Owner: Akses finansial & omzet"
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[11px] font-semibold transition-colors duration-150"
+              style={
+                userRole === 'owner'
+                  ? {
+                      background: 'rgba(79,70,229,0.18)',
+                      color: '#818cf8',
+                      border: '1px solid rgba(99,102,241,0.3)',
+                    }
+                  : {
+                      background: 'transparent',
+                      color: 'rgba(255,255,255,0.35)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }
+              }
             >
-              <ShieldCheck className="w-3 h-3" />
+              <ShieldCheck className="w-3 h-3 shrink-0" />
               <span>Owner</span>
             </button>
+
+            {/* Gudang */}
             <button
               onClick={() => setUserRole('warehouse')}
-              className={`py-1 text-xs font-medium rounded transition-colors flex items-center justify-center gap-1 ${
-                userRole === 'warehouse'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
               title="Role Staf Gudang: Kelola kondisi alat & stok fisik"
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[11px] font-semibold transition-colors duration-150"
+              style={
+                userRole === 'warehouse'
+                  ? {
+                      background: 'rgba(79,70,229,0.18)',
+                      color: '#818cf8',
+                      border: '1px solid rgba(99,102,241,0.3)',
+                    }
+                  : {
+                      background: 'transparent',
+                      color: 'rgba(255,255,255,0.35)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }
+              }
             >
-              <Warehouse className="w-3 h-3" />
+              <Warehouse className="w-3 h-3 shrink-0" />
               <span>Gudang</span>
             </button>
           </div>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-            Modul Utama
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+          <div className="px-2 pb-2">
+            <span className="section-label">Modul Utama</span>
           </div>
-          {menuItems.map((item) => {
+
+          {menuItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
+            const staggerClass = `stagger-${index + 1}`;
+
             return (
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded transition-colors duration-150 animate-slide-in-left ${staggerClass} ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'nav-item-active'
+                    : 'text-ink-200 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <div className="flex items-center gap-3 truncate">
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <Icon
+                    className="w-4 h-4 shrink-0 transition-colors duration-150"
+                    style={{
+                      color: isActive
+                        ? '#6366f1'
+                        : 'rgba(255,255,255,0.4)',
+                    }}
+                  />
                   <span className="truncate">{item.label}</span>
                 </div>
-                {item.badge && (
+
+                {/* Conflict badge — calendar only, static carmine dot */}
+                {item.id === 'calendar' && conflictCount > 0 && (
                   <span
-                    className={`ml-2 text-[11px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                      item.id === 'calendar' && conflictCount > 0
-                        ? 'bg-red-500 text-white font-bold animate-pulse'
-                        : 'bg-slate-800 text-slate-300'
-                    }`}
+                    className="badge-carmine ml-2 shrink-0 font-mono text-[10px]"
+                    title={`${conflictCount} bentrok terdeteksi`}
                   >
-                    {item.badge}
+                    {conflictCount}
                   </span>
                 )}
               </button>
@@ -184,29 +281,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        {/* User Account & Logout in Sidebar */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between gap-2">
+        {/* User Profile Footer */}
+        <div
+          className="p-3 flex items-center justify-between gap-2 shrink-0"
+          style={{
+            background: 'rgba(0,0,0,0.3)',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+          }}
+        >
           <div className="flex items-center gap-2.5 min-w-0">
+            {/* Avatar */}
             <div
-              className="w-8 h-8 rounded-full text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm"
-              style={{ backgroundColor: currentUser?.avatarBgColor || '#4F46E5' }}
+              className="w-8 h-8 rounded-full text-white font-bold text-xs flex items-center justify-center shrink-0"
+              style={{ backgroundColor: currentUser?.avatarBgColor || '#4f46e5' }}
             >
               {currentUser?.avatarInitials || 'RP'}
             </div>
+
+            {/* Name + role pill */}
             <div className="min-w-0">
-              <div className="text-xs font-bold text-white truncate">
+              <div className="text-[13px] font-semibold text-white truncate leading-tight">
                 {currentUser?.name || 'Pengguna'}
               </div>
-              <div className="text-[10px] text-slate-400 capitalize truncate">
-                {currentUser?.title || (userRole === 'owner' ? 'Owner' : userRole === 'warehouse' ? 'Staf Gudang' : 'Admin')}
+              <div className="mt-0.5">
+                <span className={rolePillClass}>
+                  {currentUser?.title || roleLabel}
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Logout — icon only, no bg on hover */}
           {onLogout && (
             <button
               onClick={onLogout}
-              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded transition-colors shrink-0"
               title="Keluar / Logout Akun"
+              className="shrink-0 transition-colors duration-150 p-1"
+              style={{ color: 'rgba(255,255,255,0.35)' }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.color = '#fb7185')
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.color =
+                  'rgba(255,255,255,0.35)')
+              }
             >
               <LogOut className="w-4 h-4" />
             </button>

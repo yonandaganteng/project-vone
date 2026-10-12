@@ -11,6 +11,7 @@ import {
   MapPin,
   Phone,
   Mail,
+  X,
 } from 'lucide-react';
 import { EventBooking, Equipment, BookingEquipmentItem } from '../types/rental';
 import { formatRupiah, calculateDaysBetween } from '../utils/formatters';
@@ -67,6 +68,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
       availableStock: number;
       deficit: number;
       conflictsWith: string[];
+      equipmentId: string;
     }[] = [];
 
     for (const item of items) {
@@ -88,6 +90,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           availableStock,
           deficit,
           conflictsWith: conflictingEvents.map((c) => c.eventName),
+          equipmentId: item.equipmentId,
         });
       }
     }
@@ -173,184 +176,319 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Draft booking code preview
+  const draftCode = `EVT-DRAFT-${String(allBookings.length + 1).padStart(3, '0')}`;
+  const isFormValid = eventName.trim() !== '' && clientName.trim() !== '';
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-backdrop-enter"
+      style={{ background: 'rgba(10,11,14,0.7)', backdropFilter: 'blur(4px)' }}
+    >
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
+        className="panel-elevated flex flex-col w-full animate-dialog-enter overflow-hidden"
+        style={{
+          maxWidth: 640,
+          borderRadius: 8,
+          border: '1px solid rgba(17,19,24,0.1)',
+          maxHeight: '90vh',
+        }}
       >
-        {/* Modal Header */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-          <div>
-            <h3 className="font-bold text-base text-slate-900 tracking-tight">
-              Buat Event & Booking Alat Baru
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <div className="px-6 py-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h3
+              className="text-[16px] font-bold tracking-tight"
+              style={{ color: '#111318' }}
+            >
+              Buat Booking Baru
             </h3>
-            <p className="text-xs text-slate-500">
-              Validasi alokasi unit secara otomatis mencegah double booking
+            <p
+              className="text-[12px] font-mono mt-0.5"
+              style={{ color: '#9ca3af' }}
+            >
+              {draftCode}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded text-slate-400 hover:text-slate-600 transition-colors"
+            className="shrink-0 transition-colors duration-100"
+            style={{ color: '#d1d5db' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#111318')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#d1d5db')}
+            aria-label="Tutup"
           >
-            <XCircle className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
+        <div className="divider" />
 
-        {/* Modal Scrollable Body */}
-        <div className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
-          {/* Live Conflict Warning Box if any */}
-          {conflictWarnings.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3.5 space-y-2">
-              <div className="flex items-center gap-2 font-bold text-red-900">
-                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                <span>Peringatan Deteksi Bentrok Stok (Double Booking)!</span>
-              </div>
-              <ul className="space-y-1 text-red-800 list-disc list-inside">
-                {conflictWarnings.map((w, i) => (
-                  <li key={i}>
-                    <strong>{w.equipmentName}</strong>: Diminta {w.requestedQty} unit, sisa stok aman hanya {w.availableStock} unit.
-                    Kurang {w.deficit} unit (Berebut dengan: {w.conflictsWith.join(', ') || 'Event lain'}).
-                  </li>
-                ))}
-              </ul>
-              <p className="text-[11px] text-red-700 font-medium">
-                Saran: Kurangi kuota atau tawarkan substitusi alat alternatif sebelum finalisasi.
-              </p>
-            </div>
-          )}
+        {/* ── Scrollable Body ─────────────────────────────────────────── */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
 
-          {/* Event & Client Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* ── Section 1: Event Info ──────────────────────────────────── */}
+          <div className="space-y-3">
+            <div className="section-label">Informasi Event</div>
+
+            {/* Event name — full width */}
             <div>
-              <label className="font-bold text-slate-700 block mb-1">Nama Event *</label>
+              <label className="field-label flex items-center gap-1.5 mb-1.5">
+                <Building className="w-3 h-3" />
+                Nama Event *
+              </label>
               <input
                 type="text"
                 required
                 placeholder="cth: Festival Musik Mahasiswa 2026"
                 value={eventName}
                 onChange={(e) => setEventName(e.target.value)}
-                className="w-full p-2 border border-slate-300 rounded text-xs"
+                className="field-input w-full"
               />
             </div>
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Nama Klien / EO *</label>
-              <input
-                type="text"
-                required
-                placeholder="cth: PT Kreasi Bangsa (Bpk. Andre)"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                className="w-full p-2 border border-slate-300 rounded text-xs"
-              />
+
+            {/* Client + Phone */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="field-label flex items-center gap-1.5 mb-1.5">
+                  <User className="w-3 h-3" />
+                  Nama Klien / EO *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="cth: PT Kreasi Bangsa"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  className="field-input w-full"
+                />
+              </div>
+              <div>
+                <label className="field-label flex items-center gap-1.5 mb-1.5">
+                  <Phone className="w-3 h-3" />
+                  No. WhatsApp
+                </label>
+                <input
+                  type="text"
+                  placeholder="0812-xxxx-xxxx"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  className="field-input w-full"
+                />
+              </div>
+            </div>
+
+            {/* Email + Location */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="field-label flex items-center gap-1.5 mb-1.5">
+                  <Mail className="w-3 h-3" />
+                  Email Klien
+                </label>
+                <input
+                  type="email"
+                  placeholder="pic@event.co.id"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  className="field-input w-full"
+                />
+              </div>
+              <div>
+                <label className="field-label flex items-center gap-1.5 mb-1.5">
+                  <MapPin className="w-3 h-3" />
+                  Lokasi Venue
+                </label>
+                <input
+                  type="text"
+                  placeholder="cth: Balai Kartini, Jakarta"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="field-input w-full"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">No. WhatsApp</label>
-              <input
-                type="text"
-                placeholder="0812-xxxx-xxxx"
-                value={clientPhone}
-                onChange={(e) => setClientPhone(e.target.value)}
-                className="w-full p-2 border border-slate-300 rounded text-xs"
-              />
+          {/* ── Section 2: Dates ───────────────────────────────────────── */}
+          <div className="space-y-3">
+            <div className="section-label">Periode Sewa</div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="field-label flex items-center gap-1.5 mb-1.5">
+                  <Calendar className="w-3 h-3" />
+                  Tgl Mulai
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="field-input w-full font-mono"
+                />
+              </div>
+              <div>
+                <label className="field-label flex items-center gap-1.5 mb-1.5">
+                  <Calendar className="w-3 h-3" />
+                  Tgl Selesai
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="field-input w-full font-mono"
+                />
+              </div>
             </div>
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Email Klien</label>
-              <input
-                type="email"
-                placeholder="pic@event.co.id"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-                className="w-full p-2 border border-slate-300 rounded text-xs"
-              />
-            </div>
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Lokasi Venue</label>
-              <input
-                type="text"
-                placeholder="cth: Balai Kartini, Jakarta"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full p-2 border border-slate-300 rounded text-xs"
-              />
+
+            {/* Timeline visual + duration */}
+            <div className="flex items-center gap-3 pt-1">
+              {/* Start marker */}
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: '#4f46e5' }}
+                />
+                <span
+                  className="font-mono text-[10px] tabular-nums"
+                  style={{ color: '#6b7280' }}
+                >
+                  {startDate}
+                </span>
+              </div>
+
+              {/* Track */}
+              <div className="flex-1 relative h-px" style={{ background: 'rgba(17,19,24,0.1)' }}>
+                <div
+                  className="absolute inset-y-0 left-0 right-0 transition-all duration-200"
+                  style={{ background: '#4f46e5', opacity: 0.35 }}
+                />
+                {/* Duration badge */}
+                <div
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 rounded font-mono text-[11px] font-semibold tabular-nums"
+                  style={{
+                    background: '#f7f6f4',
+                    border: '1px solid rgba(17,19,24,0.1)',
+                    color: '#4f46e5',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {durationDays} hari
+                </div>
+              </div>
+
+              {/* End marker */}
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: '#6366f1' }}
+                />
+                <span
+                  className="font-mono text-[10px] tabular-nums"
+                  style={{ color: '#6b7280' }}
+                >
+                  {endDate}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Rental Dates */}
-          <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Tgl Mulai Sewa</label>
-              <input
-                type="date"
-                required
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full p-2 bg-white border border-slate-300 rounded text-xs font-mono"
-              />
-            </div>
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Tgl Selesai Sewa</label>
-              <input
-                type="date"
-                required
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full p-2 bg-white border border-slate-300 rounded text-xs font-mono"
-              />
-            </div>
-            <div className="col-span-2 text-slate-500 font-mono text-[11px]">
-              Durasi Sewa: <strong>{durationDays} Hari</strong>
-            </div>
-          </div>
-
-          {/* Items Selector Table */}
+          {/* ── Section 3: Equipment Items ────────────────────────────── */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="font-bold text-slate-700 block">
-                Daftar Alat yang Disewa:
-              </label>
+              <div className="section-label" style={{ marginBottom: 0 }}>Daftar Alat</div>
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="text-xs text-indigo-600 font-semibold hover:text-indigo-800 flex items-center gap-1"
+                className="btn-ghost text-[12px] flex items-center gap-1.5 h-7 px-3"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Tambah Baris Alat</span>
+                <Plus className="w-3 h-3" />
+                Tambah Alat
               </button>
             </div>
 
-            <div className="space-y-2 border border-slate-200 rounded-lg p-3 bg-slate-50/50">
+            <div className="space-y-1.5 pt-1">
               {items.map((item, index) => {
                 const targetEq = equipmentList.find((e) => e.id === item.equipmentId);
                 const itemDailyRate = targetEq?.dailyRate || 0;
                 const lineTotal = itemDailyRate * item.quantity * durationDays;
 
+                // Availability for this item
+                const availData = targetEq
+                  ? getAvailableStockForRange(targetEq, startDate, endDate, allBookings)
+                  : null;
+                const availableStock = availData?.availableStock ?? (targetEq?.totalStock ?? 0);
+                const hasConflict = item.quantity > availableStock;
+                const conflict = conflictWarnings.find((w) => w.equipmentId === item.equipmentId);
+
+                let availDotColor = '#059669'; // emerald
+                let availLabel = `${availableStock} tersedia`;
+                if (hasConflict) {
+                  availDotColor = '#be123c'; // carmine
+                  availLabel = `Kurang ${conflict?.deficit ?? 0} unit`;
+                } else if (availableStock <= (targetEq?.totalStock ?? 0) * 0.3) {
+                  availDotColor = '#d97706'; // amber
+                  availLabel = `${availableStock} tersisa`;
+                }
+
                 return (
-                  <div
-                    key={index}
-                    className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-white p-2.5 rounded-lg border border-slate-200"
-                  >
-                    <div className="flex-1 min-w-0">
+                  <React.Fragment key={index}>
+                    {/* Equipment row */}
+                    <div
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-md"
+                      style={{
+                        background: '#fefdfb',
+                        border: hasConflict
+                          ? '1px solid rgba(190,18,60,0.25)'
+                          : '1px solid rgba(17,19,24,0.08)',
+                        transition: 'border-color 200ms ease',
+                      }}
+                    >
+                      {/* Equipment selector */}
                       <select
                         value={item.equipmentId}
                         onChange={(e) => handleEquipmentChange(index, e.target.value)}
-                        className="w-full p-1.5 border border-slate-300 rounded text-xs bg-white"
+                        className="field-input flex-1 min-w-0 text-[13px] h-8 py-0"
+                        style={{ height: 32 }}
                       >
                         {equipmentList.map((eq) => (
                           <option key={eq.id} value={eq.id}>
-                            {eq.name} (Stok: {eq.totalStock} Unit) - {formatRupiah(eq.dailyRate)}/hr
+                            {eq.name} — {formatRupiah(eq.dailyRate)}/hr
                           </option>
                         ))}
                       </select>
-                    </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex items-center gap-1">
-                        <span className="text-[11px] text-slate-500">Qty:</span>
+                      {/* Availability indicator */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{
+                            background: availDotColor,
+                            transition: 'background 200ms ease',
+                          }}
+                        />
+                        <span
+                          className="font-mono text-[11px] tabular-nums"
+                          style={{
+                            color: availDotColor,
+                            transition: 'color 200ms ease',
+                            minWidth: 72,
+                          }}
+                        >
+                          {availLabel}
+                        </span>
+                      </div>
+
+                      {/* Qty input */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <label
+                          className="field-label"
+                          style={{ margin: 0, fontSize: 10 }}
+                        >
+                          Qty
+                        </label>
                         <input
                           type="number"
                           min={1}
@@ -359,58 +497,143 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                           onChange={(e) =>
                             handleQuantityChange(index, parseInt(e.target.value, 10) || 1)
                           }
-                          className="w-16 p-1.5 border border-slate-300 rounded text-xs font-mono text-center"
+                          className="field-input font-mono tabular-nums text-center"
+                          style={{ width: 52, height: 32, padding: '0 8px' }}
                         />
                       </div>
 
-                      <div className="w-28 text-right font-mono font-bold text-slate-900 text-xs">
+                      {/* Subtotal */}
+                      <div
+                        className="font-mono tabular-nums text-right text-[12px] shrink-0"
+                        style={{ width: 100, color: '#111318' }}
+                      >
                         {formatRupiah(lineTotal)}
                       </div>
 
+                      {/* Remove */}
                       {items.length > 1 && (
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(index)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors"
+                          className="shrink-0 transition-colors duration-100"
+                          style={{ color: '#d1d5db' }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = '#be123c')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = '#d1d5db')}
+                          aria-label="Hapus baris"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <X className="w-4 h-4" />
                         </button>
                       )}
                     </div>
-                  </div>
+
+                    {/* Inline conflict warning — transitions on opacity */}
+                    <div
+                      style={{
+                        overflow: 'hidden',
+                        maxHeight: hasConflict ? 40 : 0,
+                        opacity: hasConflict ? 1 : 0,
+                        transition: 'max-height 200ms ease, opacity 200ms ease',
+                      }}
+                    >
+                      {conflict && (
+                        <div
+                          className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono"
+                          style={{ color: '#be123c' }}
+                        >
+                          <AlertTriangle className="w-3 h-3 shrink-0" />
+                          <span>
+                            Diminta {conflict.requestedQty}, tersedia {conflict.availableStock} unit — kurang {conflict.deficit} (berebut:{' '}
+                            {conflict.conflictsWith.join(', ') || 'event lain'})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </React.Fragment>
                 );
               })}
             </div>
           </div>
 
-          {/* Total Tagihan Box */}
-          <div className="bg-slate-900 text-white p-3.5 rounded-lg flex items-center justify-between font-mono">
-            <div>
-              <span className="text-xs text-slate-400 block">Estimasi Nilai Sewa:</span>
-              <span className="text-lg font-bold text-indigo-400">
-                {formatRupiah(totalAmount)}
-              </span>
+          {/* ── Section 4: Summary ────────────────────────────────────── */}
+          <div className="space-y-3">
+            <div className="section-label">Ringkasan</div>
+
+            <div
+              className="flex items-end justify-between px-4 py-3 rounded-md"
+              style={{
+                background: '#fefdfb',
+                border: '1px solid rgba(17,19,24,0.08)',
+              }}
+            >
+              <div className="space-y-0.5">
+                <p
+                  className="text-[11px] uppercase tracking-widest font-medium"
+                  style={{ color: '#9ca3af', letterSpacing: '0.08em' }}
+                >
+                  Total Estimasi
+                </p>
+                <p className="metric-figure-mono animate-value-appear" style={{ lineHeight: 1 }}>
+                  {formatRupiah(totalAmount)}
+                </p>
+              </div>
+              <div
+                className="text-right font-mono text-[12px] tabular-nums"
+                style={{ color: '#6b7280' }}
+              >
+                <div>{items.length} item</div>
+                <div>{durationDays} hari sewa</div>
+              </div>
             </div>
-            <div className="text-right text-xs text-slate-300">
-              {items.length} Item · {durationDays} Hari Sewa
+
+            {/* Conflicts summary strip */}
+            <div
+              style={{
+                overflow: 'hidden',
+                maxHeight: conflictWarnings.length > 0 ? 120 : 0,
+                opacity: conflictWarnings.length > 0 ? 1 : 0,
+                transition: 'max-height 240ms ease, opacity 200ms ease',
+              }}
+            >
+              <div
+                className="px-4 py-3 text-[12px] space-y-1"
+                style={{
+                  borderLeft: '3px solid #be123c',
+                  background: 'rgba(190,18,60,0.04)',
+                  borderRadius: '0 4px 4px 0',
+                }}
+              >
+                <div
+                  className="flex items-center gap-2 font-semibold"
+                  style={{ color: '#be123c' }}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  {conflictWarnings.length} potensi bentrok stok terdeteksi
+                </div>
+                <p style={{ color: '#9ca3af' }} className="text-[11px]">
+                  Kurangi kuantitas atau pilih alat alternatif sebelum finalisasi.
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+        {/* ── Footer ─────────────────────────────────────────────────── */}
+        <div className="divider" />
+        <div className="px-6 py-4 flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+            className="btn-ghost"
           >
             Batal
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            disabled={!isFormValid}
+            className="btn-primary btn-magnetic"
+            style={!isFormValid ? { opacity: 0.45, cursor: 'not-allowed' } : {}}
           >
-            Simpan & Daftarkan Jadwal
+            Simpan &amp; Daftarkan
           </button>
         </div>
       </form>
